@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario de Turnos</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 25px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .month-nav {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #2575fc;
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .month-nav:hover:not(:disabled) {
+            background-color: #f0f5ff;
+            transform: scale(1.1);
+        }
+        
+        .month-nav:disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .month-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #2575fc;
+            text-align: center;
+        }
+        
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #555;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px 0;
+        }
+        
+        .weekday {
+            padding: 10px;
+        }
+        
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .date-cell {
+            height: 90px;
+            padding: 10px;
+            border: 2px solid #eaeaea;
+            border-radius: 10px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .date-cell:hover:not(.disabled):not(.selected) {
+            background-color: #f0f7ff;
+            border-color: #2575fc;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.2);
+        }
+        
+        .date-number {
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .other-month {
+            color: #ccc;
+            background-color: #f8f8f8;
+        }
+        
+        .today {
+            background-color: #e3f2fd;
+            border: 2px solid #2196f3;
+        }
+        
+        .today .date-number {
+            color: #2196f3;
+            font-weight: bold;
+        }
+        
+        .disabled {
+            background-color: #f5f5f5;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .disabled .date-number {
+            color: #ccc;
+        }
+        
+        .selected {
+            background-color: #2575fc;
+            color: white;
+            border-color: #1c5dc1;
+            z-index: 10;
+        }
+        
+        .selected .date-number {
+            color: white;
+        }
+        
+        .turnos-flotante {
+            display: none;
+            position: absolute;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            width: 250px;
+            z-index: 100;
+            border: 2px solid #2575fc;
+        }
+        
+        .turnos-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .turnos-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2575fc;
+        }
+        
+        .close-turnos {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .turnos-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .turno-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 5px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        
+        .turno-item:last-child {
+            border-bottom: none;
+        }
+        
+        .turno-item input {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        
+        .turno-item label {
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        
+        .submit-turnos {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .submit-turnos:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(37, 117, 252, 0.3);
+        }
+        
+        .submit-turnos:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .submit-global {
+            display: block;
+            width: 100%;
+            max-width: 900px;
+            padding: 15px;
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        .submit-global:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 125, 50, 0.4);
+        }
+        
+        .submit-global:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 768px) {
+            .date-cell {
+                height: 70px;
+                padding: 8px;
+            }
+            
+            .date-number {
+                font-size: 1.1rem;
+            }
+            
+            .month-title {
+                font-size: 1.6rem;
+            }
+            
+            .turnos-flotante {
+                width: 220px;
+                left: 50% !important;
+                transform: translateX(-50%);
+                top: 120px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="month-nav" id="prev-month" disabled>&lt;</button>
+            <h1 class="month-title" id="current-month">Mes y Año</h1>
+            <button class="month-nav" id="next-month">&gt;</button>
+        </div>
+        
+        <div class="weekdays">
+            <div class="weekday">Dom</div>
+            <div class="weekday">Lun</div>
+            <div class="weekday">Mar</div>
+            <div class="weekday">Mié</div>
+            <div class="weekday">Jue</div>
+            <div class="weekday">Vie</div>
+            <div class="weekday">Sáb</div>
+        </div>
+        
+        <div class="calendar" id="calendar-grid">
+            <!-- El calendario se generará con JavaScript -->
+        </div>
+        
+        <div class="turnos-flotante" id="turnos-box">
+            <div class="turnos-header">
+                <div class="turnos-title" id="turnos-date">Fecha</div>
+                <button class="close-turnos" id="close-turnos">&times;</button>
+            </div>
+            <div class="turnos-list" id="turnos-list">
+                <!-- Los turnos se generarán dinámicamente -->
+            </div>
+            <button class="submit-turnos" id="submit-turnos">Guardar</button>
+        </div>
+    </div>
+    
+    <button class="submit-global" id="submit-global" disabled>Confirmar Todos los Turnos</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variables globales
+            let currentDate = new Date();
+            let currentMonth = currentDate.getMonth();
+            let currentYear = currentDate.getFullYear();
+            let selectedDate = null;
+            let allSelectedSlots = {}; // Almacenará todos los turnos seleccionados por fecha
+            
+            // Elementos del DOM
+            const calendarGrid = document.getElementById('calendar-grid');
+            const monthTitle = document.getElementById('current-month');
+            const prevMonthBtn = document.getElementById('prev-month');
+            const nextMonthBtn = document.getElementById('next-month');
+            const turnosBox = document.getElementById('turnos-box');
+            const turnosDate = document.getElementById('turnos-date');
+            const turnosList = document.getElementById('turnos-list');
+            const submitTurnosBtn = document.getElementById('submit-turnos');
+            const closeTurnosBtn = document.getElementById('close-turnos');
+            const submitGlobalBtn = document.getElementById('submit-global');
+            
+            // Nombres de los meses
+            const monthNames = [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ];
+            
+            // Días de la semana
+            const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            
+            // Horarios disponibles
+            const timeSlots = [
+                "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", 
+                "11:00 - 12:00", "12:00 - 13:00", "13:00 - 14:00",
+                "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00"
+            ];
+            
+            // Inicializar el calendario
+            function initCalendar() {
+                updateMonthTitle();
+                generateCalendar();
+                loadSelectionsFromStorage();
+                setupEventListeners();
+                updateGlobalSubmitButton();
+            }
+            
+            // Actualizar el título del mes y año
+            function updateMonthTitle() {
+                monthTitle.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            }
+            
+            // Generar el calendario
+            function generateCalendar() {
+                // Limpiar el calendario existente
+                calendarGrid.innerHTML = '';
+                
+                // Obtener el primer día del mes y el número de días
+                const firstDay = new Date(currentYear, currentMonth, 1);
+                const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                
+                // Día de la semana del primer día (0 = Domingo, 1 = Lunes, etc.)
+                let firstDayIndex = firstDay.getDay();
+                
+                // Días del mes anterior para completar la primera semana
+                const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+                
+                // Generar días del mes anterior (deshabilitados)
+                for (let i = firstDayIndex; i > 0; i--) {
+                    const day = prevMonthLastDay - i + 1;
+                    const date = new Date(currentYear, currentMonth - 1, day);
+                    const dateId = formatDateId(date);
+                    
+                    const dateCell = createDateCell(day, dateId, true, true);
+                    calendarGrid.appendChild(dateCell);
+                }
+                
+                // Generar días del mes actual
+                const today = new Date();
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const date = new Date(currentYear, currentMonth, i);
+                    const dateId = formatDateId(date);
+                    
+                    const isToday = 
+                        i === today.getDate() && 
+                        currentMonth === today.getMonth() && 
+                        currentYear === today.getFullYear();
+                    
+                    // Deshabilitar días pasados
+                    const isDisabled = date < today && !isToday;
+                    
+                    const dateCell = createDateCell(i, dateId, false, isDisabled, isToday);
+                    
+                    // Añadir indicador si hay turnos seleccionados para esta fecha
+                    if (allSelectedSlots[dateId] && allSelectedSlots[dateId].length > 0) {
+                        addSelectionIndicator(dateCell, allSelectedSlots[dateId].length);
+                    }
+                    
+                    calendarGrid.appendChild(dateCell);
+                }
+                
+                // Calcular días restantes para completar la última semana
+                const totalCells = 42; // 6 semanas * 7 días
+                const remainingCells = totalCells - (firstDayIndex + daysInMonth);
+                
+                // Generar días del próximo mes (deshabilitados inicialmente)
+                for (let i = 1; i <= remainingCells; i++) {
+                    const date = new Date(currentYear, currentMonth + 1, i);
+                    const dateId = formatDateId(date);
+                    
+                    const dateCell = createDateCell(i, dateId, true, true);
+                    calendarGrid.appendChild(dateCell);
+                }
+                
+                // Actualizar estado del botón de mes anterior
+                updatePrevButtonState();
+            }
+            
+            // Crear una celda de fecha
+            function createDateCell(day, dateId, isOtherMonth, isDisabled = false, isToday = false) {
+                const dateCell = document.createElement('div');
+                dateCell.className = 'date-cell';
+                if (isOtherMonth) dateCell.classList.add('other-month');
+                if (isToday) dateCell.classList.add('today');
+                if (isDisabled) dateCell.classList.add('disabled');
+                dateCell.id = `cell-${dateId}`;
+                dateCell.setAttribute('data-date', dateId);
+                
+                const dateNumber = document.createElement('div');
+                dateNumber.className = 'date-number';
+                dateNumber.textContent = day;
+                
+                dateCell.appendChild(dateNumber);
+                
+                // Solo agregar evento si no está deshabilitado
+                if (!isDisabled) {
+                    dateCell.addEventListener('click', function() {
+                        selectDate(dateId, this);
+                    });
+                }
+                
+                return dateCell;
+            }
+            
+            // Añadir indicador de selección a una celda
+            function addSelectionIndicator(dateCell, count) {
+                // Eliminar indicador existente si hay
+                const existingIndicator = dateCell.querySelector('.selection-indicator');
+                if (existingIndicator) {
+                    dateCell.removeChild(existingIndicator);
+                }
+                
+                const indicator = document.createElement('div');
+                indicator.className = 'selection-indicator';
+                indicator.style.cssText = `
+                    position: absolute;
+                    bottom: 5px;
+                    right: 5px;
+                    width: 20px;
+                    height: 20px;
+                    background-color: #4CAF50;
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.8rem;
+                    font-weight: bold;
+                `;
+                indicator.textContent = count;
+                
+                dateCell.appendChild(indicator);
+            }
+            
+            // Formatear ID de fecha como YYYY-MM-DD
+            function formatDateId(date) {
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            // Seleccionar una fecha
+            function selectDate(dateId, cellElement) {
+                // Quitar selección anterior
+                if (selectedDate) {
+                    const prevSelected = document.getElementById(`cell-${selectedDate}`);
+                    if (prevSelected) {
+                        prevSelected.classList.remove('selected');
+                    }
+                }
+                
+                // Marcar nueva selección
+                selectedDate = dateId;
+                cellElement.classList.add('selected');
+                
+                // Mostrar el cuadro de turnos junto a la celda
+                showTurnosBox(dateId, cellElement);
+            }
+            
+            // Mostrar el cuadro de turnos
+            function showTurnosBox(dateId, cellElement) {
+                // Parsear la fecha seleccionada
+                const [year, month, day] = dateId.split('-');
+                const dateObj = new Date(year, month - 1, day);
+                const dayName = dayNames[dateObj.getDay()];
+                
+                // Actualizar texto de fecha seleccionada
+                turnosDate.textContent = `${dayName} ${day}/${month}`;
+                
+                // Generar checkboxes para los turnos
+                turnosList.innerHTML = '';
+                
+                // Obtener turnos ya seleccionados para esta fecha
+                const selectedForDate = allSelectedSlots[dateId] || [];
+                
+                timeSlots.forEach((slot, index) => {
+                    const slotId = `slot-${dateId}-${index}`;
+                    const isChecked = selectedForDate.includes(slot);
+                    
+                    const turnoItem = document.createElement('div');
+                    turnoItem.className = 'turno-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = slotId;
+                    checkbox.value = slot;
+                    checkbox.checked = isChecked;
+                    checkbox.addEventListener('change', function() {
+                        updateSelectedSlots(dateId, slot, this.checked);
+                    });
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = slotId;
+                    label.textContent = slot;
+                    
+                    turnoItem.appendChild(checkbox);
+                    turnoItem.appendChild(label);
+                    turnosList.appendChild(turnoItem);
+                });
+                
+                // Posicionar el cuadro de turnos
+                const rect = cellElement.getBoundingClientRect();
+                const containerRect = document.querySelector('.container').getBoundingClientRect();
+                
+                let left = rect.right + 10;
+                let top = rect.top;
+                
+                // Ajustar si se sale por la derecha
+                if (left + 250 > containerRect.right) {
+                    left = rect.left - 260;
+                }
+                
+                // Ajustar si se sale por abajo
+                if (top + turnosBox.offsetHeight > containerRect.bottom) {
+                    top = containerRect.bottom - turnosBox.offsetHeight - 10;
+                }
+                
+                turnosBox.style.left = `${left - containerRect.left}px`;
+                turnosBox.style.top = `${top - containerRect.top}px`;
+                
+                // Mostrar el cuadro
+                turnosBox.style.display = 'block';
+            }
+            
+            // Ocultar el cuadro de turnos
+            function hideTurnosBox() {
+                turnosBox.style.display = 'none';
+                
+                // Quitar selección de la fecha
+                if (selectedDate) {
+                    const selectedCell = document.getElementById(`cell-${selectedDate}`);
+                    if (selectedCell) {
+                        selectedCell.classList.remove('selected');
+                    }
+                    selectedDate = null;
+                }
+            }
+            
+            // Actualizar los turnos seleccionados para una fecha
+            function updateSelectedSlots(dateId, slot, isSelected) {
+                if (!allSelectedSlots[dateId]) {
+                    allSelectedSlots[dateId] = [];
+                }
+                
+                if (isSelected) {
+                    // Añadir si no está ya
+                    if (!allSelectedSlots[dateId].includes(slot)) {
+                        allSelectedSlots[dateId].push(slot);
+                    }
+                } else {
+                    // Quitar si está
+                    allSelectedSlots[dateId] = allSelectedSlots[dateId].filter(s => s !== slot);
+                }
+                
+                // Actualizar indicador en la celda
+                const cell = document.getElementById(`cell-${dateId}`);
+                if (cell) {
+                    if (allSelectedSlots[dateId].length > 0) {
+                        addSelectionIndicator(cell, allSelectedSlots[dateId].length);
+                    } else {
+                        const indicator = cell.querySelector('.selection-indicator');
+                        if (indicator) {
+                            cell.removeChild(indicator);
+                        }
+                    }
+                }
+                
+                // Guardar en almacenamiento
+                saveSelectionsToStorage();
+                
+                // Actualizar botón de envío global
+                updateGlobalSubmitButton();
+            }
+            
+            // Actualizar estado del botón de envío global
+            function updateGlobalSubmitButton() {
+                const hasSelections = Object.keys(allSelectedSlots).some(date => allSelectedSlots[date].length > 0);
+                submitGlobalBtn.disabled = !hasSelections;
+            }
+            
+            // Actualizar estado del botón de mes anterior
+            function updatePrevButtonState() {
+                const today = new Date();
+                const current = new Date(currentYear, currentMonth, 1);
+                
+                // Deshabilitar si estamos en el mes actual o anterior
+                prevMonthBtn.disabled = current.getMonth() <= today.getMonth() && 
+                                      current.getFullYear() <= today.getFullYear();
+            }
+            
+            // Guardar selecciones en localStorage
+            function saveSelectionsToStorage() {
+                localStorage.setItem('selectedTurnos', JSON.stringify(allSelectedSlots));
+            }
+            
+            // Cargar selecciones desde localStorage
+            function loadSelectionsFromStorage() {
+                const storedSelections = localStorage.getItem('selectedTurnos');
+                if (storedSelections) {
+                    allSelectedSlots = JSON.parse(storedSelections);
+                }
+            }
+            
+            // Enviar todos los turnos seleccionados
+            function submitAllTurnos() {
+                // Crear formulario dinámico
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'turnos.php';
+                
+                // Campos para cada fecha y sus turnos
+                Object.keys(allSelectedSlots).forEach(date => {
+                    if (allSelectedSlots[date].length > 0) {
+                        // Campo para la fecha
+                        const dateInput = document.createElement('input');
+                        dateInput.type = 'hidden';
+                        dateInput.name = `fechas[]`;
+                        dateInput.value = date;
+                        form.appendChild(dateInput);
+                        
+                        // Campos para los turnos de esta fecha
+                        allSelectedSlots[date].forEach((slot, index) => {
+                            const slotInput = document.createElement('input');
+                            slotInput.type = 'hidden';
+                            slotInput.name = `turnos[${date}][${index}]`;
+                            slotInput.value = slot;
+                            form.appendChild(slotInput);
+                        });
+                    }
+                });
+                
+                // Enviar formulario
+                document.body.appendChild(form);
+                form.submit();
+            }
+            
+            // Configurar event listeners
+            function setupEventListeners() {
+                prevMonthBtn.addEventListener('click', function() {
+                    if (this.disabled) return;
+                    
+                    currentMonth--;
+                    if (currentMonth < 0) {
+                        currentMonth = 11;
+                        currentYear--;
+                    }
+                    updateMonthTitle();
+                    generateCalendar();
+                    hideTurnosBox();
+                });
+                
+                nextMonthBtn.addEventListener('click', function() {
+                    currentMonth++;
+                    if (currentMonth > 11) {
+                        currentMonth = 0;
+                        currentYear++;
+                    }
+                    updateMonthTitle();
+                    generateCalendar();
+                    hideTurnosBox();
+                });
+                
+                closeTurnosBtn.addEventListener('click', hideTurnosBox);
+                
+                submitGlobalBtn.addEventListener('click', submitAllTurnos);
+                
+                // Cerrar el cuadro de turnos al hacer clic fuera
+                document.addEventListener('click', function(e) {
+                    if (turnosBox.style.display === 'block' && 
+                        !turnosBox.contains(e.target) && 
+                        !e.target.closest('.date-cell:not(.disabled)')) {
+                        hideTurnosBox();
+                    }
+                });
+            }
+            
+            // Inicializar el calendario
+            initCalendar();
+        });
+    </script>
+</body>
+</html>

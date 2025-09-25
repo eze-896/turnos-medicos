@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración del Sistema Médico</title>
+    <link rel="stylesheet" href="estilos/registro_medico.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Administración del Sistema Médico</h1>
+    </header>
+
+    <nav class="menu-admin">
+        <ul>
+            <li><a href="#" onclick="mostrarSeccion('agregar-medico')">Agregar Médico</a></li>
+            <!-- Agrega más opciones aquí para modularidad, e.g.: -->
+            <!-- <li><a href="#" onclick="mostrarSeccion('gestionar-pacientes')">Gestionar Pacientes</a></li> -->
+            <!-- <li><a href="#" onclick="mostrarSeccion('reportes')">Reportes</a></li> -->
+        </ul>
+    </nav>
+
+    <main>
+        <!-- Sección para Agregar Médico -->
+        <div id="seccion-agregar-medico" class="seccion">
+            <h2>Agregar Nuevo Médico</h2>
+            <form id="form-registro-medico">
+                <fieldset>
+                    <legend>Datos Personales</legend>
+                    <input type="text" id="dni" placeholder="DNI" required>
+                    <input type="text" id="nombre" placeholder="Nombre" required>
+                    <input type="text" id="apellido" placeholder="Apellido" required>
+                    <input type="email" id="email" placeholder="Email" required>
+                    <input type="password" id="contrasena" placeholder="Contraseña" required>
+                    <input type="tel" id="telefono" placeholder="Teléfono" required>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Especialidades (Selecciona múltiples)</legend>
+                    <div id="lista-especialidades" class="checkbox-group">
+                        <!-- Se carga dinámicamente via JS -->
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Días Laborables (Selecciona múltiples)</legend>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="dias[]" value="1"> Lunes</label>
+                        <label><input type="checkbox" name="dias[]" value="2"> Martes</label>
+                        <label><input type="checkbox" name="dias[]" value="3"> Miércoles</label>
+                        <label><input type="checkbox" name="dias[]" value="4"> Jueves</label>
+                        <label><input type="checkbox" name="dias[]" value="5"> Viernes</label>
+                        <label><input type="checkbox" name="dias[]" value="6"> Sábado</label>
+                        <label><input type="checkbox" name="dias[]" value="7"> Domingo</label>
+                    </div>
+                </fieldset>
+
+                <button type="submit">Registrar Médico</button>
+            </form>
+            <div id="mensaje-respuesta"></div>
+        </div>
+
+        <!-- Secciones adicionales para modularidad (vacías por ahora) -->
+        <div id="seccion-gestionar-pacientes" class="seccion" style="display: none;">
+            <h2>Gestionar Pacientes</h2>
+            <!-- Contenido futuro aquí -->
+        </div>
+        <!-- Agrega más <div id="seccion-..."> según necesites -->
+    </main>
+
+    <script src="control_vistas/registro_medico.js"></script>
+    <script>
+        // Función modular para mostrar secciones
+        function mostrarSeccion(seccionId) {
+            // Oculta todas las secciones
+            const secciones = document.querySelectorAll('.seccion');
+            secciones.forEach(secc => secc.style.display = 'none');
+            // Muestra la seleccionada
+            document.getElementById('seccion-' + seccionId).style.display = 'block';
+        }
+        // Inicializa mostrando la primera sección
+        mostrarSeccion('agregar-medico');
+    </script>
+</body>
+</html>

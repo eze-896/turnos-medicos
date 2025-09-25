@@ -1,0 +1,167 @@
+/* ================================
+   Paleta de colores (variables)
+   ================================ */
+:root {
+    --primary-color: #81638b;     /* Morado principal */
+    --secondary-color: #b695c0;   /* Morado claro / secundario */
+    --accent-color: #dac9df;      /* Acento suave */
+    --text-color: #050505;        /* Texto principal */
+    --light-gray: #151617;        /* Fondo oscuro */
+    --border-color: #81638b;      /* Bordes y detalles */
+    --error-color: #ef233c;       /* Errores / alertas (dejé original por contraste) */
+    --success-color: #4ad66d;     /* Éxitos / confirmaciones (dejé original) */
+}
+
+/* ================================
+   Reset general
+   ================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* ================================
+   Estilo del body
+   ================================ */
+body {
+    background: linear-gradient(135deg, var(--light-gray) 0%, var(--accent-color) 100%);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* ================================
+   Contenedor principal
+   ================================ */
+.register-wrapper {
+    width: 100%;
+    max-width: 450px; /* Caja centrada y compacta */
+}
+
+.register-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ================================
+   Encabezado del login
+   ================================ */
+.register-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 35px 25px;
+    text-align: center;
+}
+
+.register-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.register-subtitle {
+    font-weight: 300;
+    opacity: 0.9;
+}
+
+/* ================================
+   Formulario de login
+   ================================ */
+.login-form {
+    padding: 30px 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* separación entre campos */
+}
+
+/* Etiquetas */
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+/* Campos de texto */
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(129, 99, 139, 0.2);
+    outline: none;
+}
+
+/* ================================
+   Botón de inicio de sesión
+   ================================ */
+.register-button {
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.register-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(129, 99, 139, 0.3);
+}
+
+/* ================================
+   Enlace a registro
+   ================================ */
+.login-link {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.login-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.login-link a:hover {
+    text-decoration: underline;
+}
+
+/* ================================
+   Responsive (pantallas pequeñas)
+   ================================ */
+@media (max-width: 500px) {
+    .register-container {
+        border-radius: 12px;
+    }
+    
+    .register-header {
+        padding: 25px 15px;
+    }
+    
+    .login-form {
+        padding: 20px 15px;
+    }
+}
