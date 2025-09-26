@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Calendario de Turnos</title>
+    <link rel="stylesheet" href="estilos/turnos.css">
+    <script src="control_vistas/turnos.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <button class="month-nav" id="prev-month" aria-label="Mes anterior">&lt;</button>
+      </div>
+      <h1 class="month-title" id="current-month">Mes y Año</h1>
+      <div>
+        <button class="month-nav" id="next-month" aria-label="Mes siguiente">&gt;</button>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <label>Filtrar por médico:
+        <select id="medico"></select>
+      </label>
+
+      <label>Especialidad:
+        <select id="especialidad"></select>
+      </label>
+
+      <label>Ver mes:
+        <input type="month" id="month-picker" />
+      </label>
+
+      <button id="buscar" class="btn">Actualizar</button>
+    </div>
+
+    <div class="weekdays">
+      <div class="weekday">Dom</div>
+      <div class="weekday">Lun</div>
+      <div class="weekday">Mar</div>
+      <div class="weekday">Mié</div>
+      <div class="weekday">Jue</div>
+      <div class="weekday">Vie</div>
+      <div class="weekday">Sáb</div>
+    </div>
+
+    <div id="calendar-grid" class="calendar" role="grid" aria-label="Calendario de turnos">
+      <!-- generado por JS -->
+    </div>
+
+    <div id="turnos-box" class="turnos-flotante" aria-hidden="true">
+      <div class="turnos-header">
+        <div class="turnos-title" id="turnos-date">Fecha</div>
+        <button class="close-turnos" id="close-turnos" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="turnos-list" id="turnos-list"></div>
+      <div style="display:flex;gap:8px;">
+        <button id="reservar-btn" class="submit-turnos" disabled>Reservar</button>
+        <button id="cancel-btn" class="submit-turnos" style="background:#ccc;color:#333;">Cancelar</button>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:16px;">
+      <button id="msg-clear" class="btn" style="display:none;">Cerrar mensaje</button>
+      <div id="message" style="margin-top:8px;min-height:24px;"></div>
+    </div>
+  </div>
+</body>
+</html>

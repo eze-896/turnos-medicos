@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendar Turnos - Sistema Médico</title>
+    <link rel="stylesheet" href="estilos/registro_medico.css"> <!-- Reusa estilos existentes -->
+    <style>
+        /* Estilos adicionales para esta página */
+        .contenedor-agendar {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .info-medico {
+            background: #f9f9f9;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .checkbox-horas {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .checkbox-horas label {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .btn-crear {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-crear:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        #fecha { margin-bottom: 10px; }
+        #mensaje-respuesta { margin-top: 10px; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Agendar Turnos para Médico</h1>
+    </header>
+
+    <div class="contenedor-agendar">
+        <div class="info-medico">
+            <h2 id="medico-info">Cargando...</h2>
+        </div>
+
+        <label for="fecha">Seleccionar Fecha (solo días laborables del médico):</label>
+        <input type="date" id="fecha" required> <!-- Removido PHP min; se maneja en JS -->
+        <div id="validacion-fecha" class="error" style="display: none;"></div>
+
+        <div id="contenedor-horas" style="display: none;">
+            <h3>Seleccionar Horas (slots de 1 hora: 08:00 - 18:00)</h3>
+            <div class="checkbox-horas" id="lista-horas">
+                <!-- Checkboxes generados dinámicamente -->
+            </div>
+        </div>
+
+        <button type="button" id="btn-crear-turnos" class="btn-crear" disabled>Crear Turnos Seleccionados</button>
+        <button type="button" onclick="window.location.href='administracion.html'" style="margin-left: 10px;">Cancelar</button>
+
+        <div id="mensaje-respuesta"></div>
+    </div>
+
+<script>
+    $(document).ready(function() {
+        // Cargar info del médico de sessionStorage
+        const idMedico = sessionStorage.getItem('medico_id');
+        const nombreMedico = sessionStorage.getItem('medico_nombre');
+        const especialidades = sessionStorage.getItem('medico_especialidades');
+        const diasJson = sessionStorage.getItem('medico_dias');
+        
+        console.log('Datos de sessionStorage:', { idMedico, nombreMedico, especialidades, diasJson }); // Debug
+        
+        if (!idMedico || !nombreMedico) {
+            alert('Error: No se encontró el médico. Redirigiendo...');
+            window.location.href = 'administracion.html';
+            return;
+        }
+        
+        // Parsear días CON TRY-CATCH (arregla el error JSON)
+        let dias = [];
+        if (diasJson) {
+            try {
+                dias = JSON.parse(diasJson);
+                console.log('Días parseados exitosamente:', dias); // Debug: Ver array
+            } catch (e) {
+                console.error('Error parseando días JSON:', e, 'Valor crudo:', diasJson);
+                alert('Error en datos de días (no es JSON válido): ' + e.message + '. Usando sin validación de días.');
+                dias = []; // Fallback: Sin validación de días
+            }
+        } else {
+            console.warn('No hay días en sessionStorage. Validación de días deshabilitada.');
+            dias = [];
+        }
+        
+        // Mostrar info del médico (incluye días para debug)
+        const diasNombres = dias.map(d => d.nombre).join(', ') || 'Ninguno';
+        $('#medico-info').html(`Médico: ${nombreMedico} | Especialidades: ${especialidades} | Días laborables: ${diasNombres}`);
+        
+        // Manejar fecha mínima en JS (equivalente a PHP date('Y-m-d'))
+        const hoy = new Date().toISOString().split('T')[0];
+        $('#fecha').attr('min', hoy);
+        
+        // Si no hay días, advertir y deshabilitar validación estricta
+        if (dias.length === 0) {
+            $('#validacion-fecha').html('<p class="error">Advertencia: No se cargaron días laborables. Cualquier fecha será permitida, pero el backend validará.</p>').show();
+            $('#contenedor-horas').show(); // Mostrar horas siempre
+            $('#btn-crear-turnos').prop('disabled', false);
+        }
+        
+        // Generar checkboxes de horas fijas (08:00 a 18:00, step 1h)
+        const horas = [];
+        for (let h = 8; h <= 18; h++) {
+            const horaStr = h.toString().padStart(2, '0') + ':00';
+            horas.push(horaStr);
+        }
+        const contenedorHoras = $('#lista-horas');
+        horas.forEach(function(hora) {
+            contenedorHoras.append(`
+                <label>
+                    <input type="checkbox" name="horas[]" value="${hora}"> ${hora}
+                </label>
+            `);
+        });
+        
+        // Evento: Al cambiar fecha, validar y mostrar/ocultar horas (CORREGIDO: Cálculo de día local)
+        $('#fecha').on('change', function() {
+            const fecha = $(this).val();
+            const validacionDiv = $('#validacion-fecha');
+            const contenedorHorasDiv = $('#contenedor-horas');
+            const btnCrear = $('#btn-crear-turnos');
+            
+            if (!fecha) {
+                contenedorHorasDiv.hide();
+                btnCrear.prop('disabled', true);
+                return;
+            }
+            
+            // Validar fecha futura
+            if (fecha < hoy) {
+                validacionDiv.text('La fecha debe ser futura.').show();
+                contenedorHorasDiv.hide();
+                btnCrear.prop('disabled', true);
+                return;
+            }
+            
+            // Si no hay días, saltar validación y mostrar todo
+            if (dias.length === 0) {
+                validacionDiv.hide();
+                contenedorHorasDiv.show();
+                btnCrear.prop('disabled', false);
+                $('input[name="horas[]"]').prop('checked', false);
+                console.log('Sin días: Mostrando horas sin validación.');
+                return;
+            }
+            
+            // CORREGIDO: Crear fecha en contexto LOCAL (evita offset UTC)
+            const fechaLocal = new Date(fecha + 'T00:00:00'); // Ancla a medianoche local
+            let diaSemana = fechaLocal.getDay(); // JS: 0=Domingo, 1=Lun...6=Sáb
+            if (diaSemana === 0) diaSemana = 7; // Ajuste a BD: Domingo=7, Lun=1...Sáb=6
+            
+            // DEBUG: Logs para verificar el cálculo
+            console.log('Fecha seleccionada (string):', fecha);
+            console.log('Fecha local completa:', fechaLocal.toString()); // Muestra día/hora local
+            console.log('Día de la semana calculado (getDay mapeado):', diaSemana); // Debe coincidir con expectativa
+            console.log('IDs de días laborables disponibles:', dias.map(d => parseInt(d.id))); // Para comparar
+            
+            const diaLaborable = dias.some(d => parseInt(d.id) === diaSemana);
+            console.log('¿Es día laborable?', diaLaborable); // Debug final
+            
+            if (!diaLaborable) {
+                const diaSeleccionado = fechaLocal.toLocaleDateString('es-ES', {weekday: 'long'}); // Nombre local correcto
+                const diasValidos = dias.map(d => d.nombre).join(', ');
+                validacionDiv.html(`El médico no trabaja los ${diaSeleccionado}. Días válidos: ${diasValidos}.`).show();
+                contenedorHorasDiv.hide();
+                btnCrear.prop('disabled', true);
+                return;
+            }
+            
+            // Válido: Mostrar horas y limpiar validación
+            validacionDiv.hide();
+            contenedorHorasDiv.show();
+            btnCrear.prop('disabled', false);
+            $('input[name="horas[]"]').prop('checked', false); // Desmarcar al cambiar fecha
+            console.log('Fecha válida, mostrando horas.');
+        });
+        
+        // Evento: Crear turnos (COMPLETADO: Manejo full de success/error)
+        $('#btn-crear-turnos').on('click', function() {
+            const fecha = $('#fecha').val();
+            const horasSeleccionadas = $('input[name="horas[]"]:checked').map(function() { return $(this).val(); }).get();
+            const mensajeDiv = $('#mensaje-respuesta');
+            
+            if (horasSeleccionadas.length === 0) {
+                alert('Selecciona al menos una hora.');
+                return;
+            }
+            
+            console.log('Creando turnos - Fecha:', fecha, 'Horas:', horasSeleccionadas, 'Médico ID:', idMedico); // Debug
+            
+            // Enviar AJAX a crear_turnos.php
+            $.ajax({
+                url: '../controles/crear_turnos.php',
+                type: 'POST',
+                data: {
+                    id_medico: idMedico,
+                    fecha: fecha,
+                    horas: horasSeleccionadas
+                },
+                dataType: 'json',
+                success: function(respuesta) {
+                    console.log('Respuesta de crear_turnos.php:', respuesta); // Debug
+                    if (respuesta.exito) {
+                        mensajeDiv.html('<p class="success">' + respuesta.mensaje + '</p>');
+                        alert('Turnos creados exitosamente. Redirigiendo...');
+                        sessionStorage.clear(); // Limpiar storage
+                        window.location.href = 'administracion.html';
+                    } else {
+                        mensajeDiv.html('<p class="error">Error: ' + (respuesta.mensaje || 'Respuesta inválida del servidor') + '</p>');
+                        // Auto-limpiar mensaje después de 5s
+                        setTimeout(() => mensajeDiv.empty(), 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error AJAX crear turnos:', error, 'Status:', status, 'Response:', xhr.responseText);
+                    const errorMsg = xhr.responseJSON ? (xhr.responseJSON.mensaje || error) : error;
+                    mensajeDiv.html('<p class="error">Error al crear turnos: ' + errorMsg + '. Ver consola (F12).</p>');
+                    // Auto-limpiar mensaje después de 5s
+                    setTimeout(() => mensajeDiv.empty(), 5000);
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

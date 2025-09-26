@@ -15,72 +15,115 @@
     <nav class="menu-admin">
         <ul>
             <li><a href="#" onclick="mostrarSeccion('agregar-medico')">Agregar Médico</a></li>
-            <!-- Agrega más opciones aquí para modularidad, e.g.: -->
-            <!-- <li><a href="#" onclick="mostrarSeccion('gestionar-pacientes')">Gestionar Pacientes</a></li> -->
-            <!-- <li><a href="#" onclick="mostrarSeccion('reportes')">Reportes</a></li> -->
+            <li><a href="#" onclick="mostrarSeccion('gestionar-medicos')">Gestionar Médicos</a></li>
         </ul>
     </nav>
 
     <main>
-        <!-- Sección para Agregar Médico -->
-        <div id="seccion-agregar-medico" class="seccion">
-            <h2>Agregar Nuevo Médico</h2>
-            <form id="form-registro-medico">
-                <fieldset>
-                    <legend>Datos Personales</legend>
-                    <input type="text" id="dni" placeholder="DNI" required>
-                    <input type="text" id="nombre" placeholder="Nombre" required>
-                    <input type="text" id="apellido" placeholder="Apellido" required>
-                    <input type="email" id="email" placeholder="Email" required>
-                    <input type="password" id="contrasena" placeholder="Contraseña" required>
-                    <input type="tel" id="telefono" placeholder="Teléfono" required>
-                </fieldset>
+       <!-- Sección para Agregar/Editar Médico (reutilizable) -->
+<div id="seccion-agregar-medico" class="seccion">
+    <div id="form-container">
+        <h2 id="form-titulo">Agregar Nuevo Médico</h2>
+        <button type="button" id="volver-lista" onclick="mostrarSeccion('gestionar-medicos')" style="display: none;">Volver a Lista</button>
+        <form id="form-registro-medico">
+            <input type="hidden" id="id_medico" name="id_medico" value=""> <!-- Para modo edit -->
+            <fieldset>
+                <legend>Datos Personales</legend>
+                <label for="dni">DNI:</label>
+                <input type="text" id="dni" name="dni" placeholder="DNI" required maxlength="8">
+                <br>
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" name="nombre" placeholder="Nombre" required maxlength="50">
+                <br>
+                <label for="apellido">Apellido:</label>
+                <input type="text" id="apellido" name="apellido" placeholder="Apellido" required maxlength="50">
+                <br>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" placeholder="Email" required>
+                <br>
+                <label for="contrasena">Contraseña:</label>
+                <input type="password" id="contrasena" name="contrasena" placeholder="Contraseña" required minlength="8">
+                <br>
+                <label for="telefono">Teléfono:</label>
+                <input type="tel" id="telefono" name="telefono" placeholder="Teléfono" required maxlength="10">
+                <br>
+            </fieldset>
 
-                <fieldset>
-                    <legend>Especialidades (Selecciona múltiples)</legend>
-                    <div id="lista-especialidades" class="checkbox-group">
-                        <!-- Se carga dinámicamente via JS -->
-                    </div>
-                </fieldset>
+            <fieldset>
+                <legend>Especialidades (Selecciona múltiples)</legend>
+                <div id="lista-especialidades" class="checkbox-group">
+                    <!-- Cargado dinámicamente -->
+                </div>
+            </fieldset>
 
-                <fieldset>
-                    <legend>Días Laborables (Selecciona múltiples)</legend>
-                    <div class="checkbox-group">
-                        <label><input type="checkbox" name="dias[]" value="1"> Lunes</label>
-                        <label><input type="checkbox" name="dias[]" value="2"> Martes</label>
-                        <label><input type="checkbox" name="dias[]" value="3"> Miércoles</label>
-                        <label><input type="checkbox" name="dias[]" value="4"> Jueves</label>
-                        <label><input type="checkbox" name="dias[]" value="5"> Viernes</label>
-                        <label><input type="checkbox" name="dias[]" value="6"> Sábado</label>
-                        <label><input type="checkbox" name="dias[]" value="7"> Domingo</label>
-                    </div>
-                </fieldset>
+            <fieldset>
+                <legend>Días Laborables (Selecciona múltiples)</legend>
+                <div id="lista-dias" class="checkbox-group">
+                    <!-- Cargado dinámicamente -->
+                </div>
+            </fieldset>
 
-                <button type="submit">Registrar Médico</button>
-            </form>
-            <div id="mensaje-respuesta"></div>
-        </div>
+            <button type="submit" id="btn-submit">Registrar Médico</button>
+        </form>
+        <div id="mensaje-respuesta"></div>
+    </div>
+</div>
 
-        <!-- Secciones adicionales para modularidad (vacías por ahora) -->
-        <div id="seccion-gestionar-pacientes" class="seccion" style="display: none;">
-            <h2>Gestionar Pacientes</h2>
-            <!-- Contenido futuro aquí -->
-        </div>
-        <!-- Agrega más <div id="seccion-..."> según necesites -->
-    </main>
+<div id="seccion-gestionar-medicos" class="seccion" style="display: none;">
+    <h2>Gestionar Médicos</h2>
+    <button onclick="mostrarSeccion('agregar-medico'); resetForm();" style="margin-bottom: 10px;">Agregar Nuevo Médico</button>
+    <div id="mensaje-tabla"></div>
+    <div id="tabla-container">
+        <table id="tabla-medicos">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Especialidades</th>
+                    <th>Días</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Cargado dinámicamente via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
 
     <script src="control_vistas/registro_medico.js"></script>
+    <script src="control_vistas/gestionar_medicos.js"></script>
     <script>
-        // Función modular para mostrar secciones
-        function mostrarSeccion(seccionId) {
-            // Oculta todas las secciones
-            const secciones = document.querySelectorAll('.seccion');
-            secciones.forEach(secc => secc.style.display = 'none');
-            // Muestra la seleccionada
-            document.getElementById('seccion-' + seccionId).style.display = 'block';
+    // Función modular para mostrar secciones (MODIFICADA: No recarga checkboxes en edit)
+    function mostrarSeccion(seccionId) {
+        const secciones = document.querySelectorAll('.seccion');
+        secciones.forEach(secc => secc.style.display = 'none');
+        document.getElementById('seccion-' + seccionId).style.display = 'block';
+        
+        if (seccionId === 'gestionar-medicos') {
+            cargarTablaMedicos(); // Cargar tabla al mostrar
+        } else if (seccionId === 'agregar-medico') {
+            // Verifica si es modo edit
+            const esModoEdit = $('#id_medico').val() !== '';
+            if (!esModoEdit) {
+                console.log('mostrarSeccion: Modo CREATE → Ejecutando resetForm() y cargando checkboxes');
+                resetForm(); // Solo reset en modo agregar nuevo
+                // Solo en create: Carga checkboxes (primera vez)
+                if (!window.checkboxesCargados) { // Usa la flag global
+                    cargarEspecialidades();
+                    cargarDias();
+                }
+            } else {
+                console.log('mostrarSeccion: Modo EDIT → Saltando reset y recarga de checkboxes (preservando marcas)');
+                // En edit: No hace nada con checkboxes (lo maneja editarMedico post-llamada)
+            }
         }
-        // Inicializa mostrando la primera sección
-        mostrarSeccion('agregar-medico');
-    </script>
+    }
+    // Inicializa mostrando agregar-medico (modo create)
+    mostrarSeccion('agregar-medico');
+</script>
 </body>
 </html>
