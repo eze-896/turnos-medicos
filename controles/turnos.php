@@ -9,6 +9,7 @@ include_once "../modelos/conexion.php";
 include_once "../modelos/turno.php";
 include_once "../modelos/medico.php";
 include_once "../modelos/especialidad.php";
+include_once "../modelos/usuario.php";
 
 // Crea una nueva conexión con la base de datos y los modelos principales
 $db = (new Conexion())->conectar();
@@ -82,7 +83,7 @@ switch ($accion) {
     case "reservar":
         $id_turno = (int) ($data["id_turno"] ?? 0);
         // Toma el id_paciente desde la sesión (debe estar logueado)
-        $id_paciente = (int) ($_SESSION["id_paciente"] ?? 0);
+        $id_paciente = (int) ($_SESSION["id_usuario"] ?? 0);
 
         // Verifica que existan los datos necesarios
         if (!$id_turno || !$id_paciente) {

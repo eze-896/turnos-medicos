@@ -62,6 +62,7 @@ try {
         $_SESSION['nombre'] = $fila['nombre'];
         $_SESSION['rol'] = $fila['rol'];
         $_SESSION['dni_usuario'] = $fila['dni'];
+        $_SESSION['id_usuario'] = $fila['id'];
 
         // Responde que el login es exitoso y envía el rol del usuario
         echo json_encode([
