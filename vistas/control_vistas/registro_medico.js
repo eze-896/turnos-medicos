@@ -53,12 +53,15 @@ $(document).ready(function() {
                         }
                     }
                 } else {
+                    console.error('Error en respuesta:', respuesta.mensaje || 'Error desconocido');
                     msg.html('<p class="error">Error: ' + (respuesta.mensaje || 'Error desconocido') + '</p>');
+                    alert('Error: ' + (respuesta.mensaje || 'Error desconocido'));
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error en submit:', error, xhr.responseText); // Debug
                 $('#mensaje-respuesta').html('<p class="error">Error de conexión: ' + error + '. Ver consola para detalles.</p>');
+                alert('Error de conexión: ' + error + '. Revisa la consola para más detalles.');
             }
         });
     });
@@ -77,6 +80,7 @@ function cargarEspecialidades(callback) {
                 } catch (e) {
                     console.error('Respuesta no es JSON válido:', respuesta);
                     $('#lista-especialidades').html('<p class="error">Error al cargar especialidades.</p>');
+                    alert('Error al cargar especialidades. Revisa la consola.');
                     return;
                 }
             } else {
@@ -86,6 +90,7 @@ function cargarEspecialidades(callback) {
             if (especialidades.error) {
                 console.error('Error del servidor:', especialidades.mensaje);
                 $('#lista-especialidades').html('<p class="error">Error del servidor: ' + especialidades.mensaje + '</p>');
+                alert('Error del servidor al cargar especialidades.');
                 return;
             }
 
@@ -105,11 +110,12 @@ function cargarEspecialidades(callback) {
         error: function(xhr, status, error) {
             console.error('Error AJAX especialidades:', status, error, xhr.responseText);
             $('#lista-especialidades').html('<p class="error">Error al cargar especialidades: ' + error + '. Ver consola.</p>');
+            alert('Error al cargar especialidades. Revisa la consola.');
         }
     });
 }
 
-// Nueva función: Cargar días dinámicamente (similar a especialidades, con callback)
+// Nueva función: Cargar días dinámicamente (ordenados Lunes a Domingo)
 function cargarDias(callback) {
     $.ajax({
         url: '../controles/listar_dias.php',
@@ -122,6 +128,7 @@ function cargarDias(callback) {
                 } catch (e) {
                     console.error('Respuesta no es JSON válido para días:', respuesta);
                     $('#lista-dias').html('<p class="error">Error al cargar días.</p>');
+                    alert('Error al cargar días. Revisa la consola.');
                     return;
                 }
             } else {
@@ -131,6 +138,7 @@ function cargarDias(callback) {
             if (dias.error) {
                 console.error('Error del servidor en días:', dias.mensaje);
                 $('#lista-dias').html('<p class="error">Error del servidor: ' + dias.mensaje + '</p>');
+                alert('Error del servidor al cargar días.');
                 return;
             }
 
@@ -150,6 +158,7 @@ function cargarDias(callback) {
         error: function(xhr, status, error) {
             console.error('Error AJAX días:', status, error, xhr.responseText);
             $('#lista-dias').html('<p class="error">Error al cargar días: ' + error + '. Ver consola.</p>');
+            alert('Error al cargar días. Revisa la consola.');
         }
     });
 }
@@ -159,44 +168,62 @@ function validarFormulario() {
     const id_medico = $('#id_medico').val();
     const esEdit = id_medico !== '';
     const campos = [
-        { id: 'dni', regex: /^\d{8}$/, msg: 'DNI debe ser numérico de 8 dígitos.' },
+        { id: 'dni', regex: /^\d{7,8}$/, msg: 'DNI debe ser numérico de 7 u 8 dígitos.' },
         { id: 'nombre', regex: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,50}$/, msg: 'Nombre inválido (solo letras, 2-50 chars).' },
         { id: 'apellido', regex: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,50}$/, msg: 'Apellido inválido (solo letras, 2-50 chars).' },
         { id: 'email', regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, msg: 'Email inválido.' },
-        { id: 'telefono', regex: /^\d{10}$/, msg: 'Teléfono debe ser numérico de 10 dígitos.' }
+        { id: 'telefono', regex: /^\d{7,15}$/, msg: 'Teléfono debe ser numérico de 7 a 15 dígitos.' }
     ];
 
-    let valido = true;
-    campos.forEach(function(campo) {
+    for (let campo of campos) {
         const valor = $('#' + campo.id).val().trim();
-        if (!valor || !campo.regex.test(valor)) {
-            alert('Error en ' + campo.id + ': ' + campo.msg);
-            valido = false;
+        if (!valor) {
+            alert('El campo ' + campo.id + ' es obligatorio.');
+            console.error('Campo vacío:', campo.id);
+            $('#' + campo.id).focus();
             return false;
         }
-    });
+        if (!campo.regex.test(valor)) {
+            alert('Error en ' + campo.id + ': ' + campo.msg);
+            console.error('Error en campo ' + campo.id + ': valor inválido', valor);
+            $('#' + campo.id).focus();
+            return false;
+        }
+    }
 
     // Contraseña: Requerida solo en create
+    const contrasena = $('#contrasena').val();
     if (!esEdit) {
-        const contrasena = $('#contrasena').val();
-        if (!contrasena || contrasena.length < 8) {
-            alert('Contraseña debe tener al menos 8 caracteres (requerida para nuevo médico).');
-            valido = false;
+        if (!contrasena) {
+            alert('La contraseña es obligatoria para nuevo médico.');
+            console.error('Contraseña vacía en creación');
+            $('#contrasena').focus();
+            return false;
         }
-    } else if ($('#contrasena').val() && $('#contrasena').val().length < 8) {
+        if (contrasena.length < 8) {
+            alert('Contraseña debe tener al menos 8 caracteres.');
+            console.error('Contraseña demasiado corta en creación');
+            $('#contrasena').focus();
+            return false;
+        }
+    } else if (contrasena && contrasena.length < 8) {
         alert('Nueva contraseña debe tener al menos 8 caracteres si la cambias.');
-        valido = false;
+        console.error('Contraseña demasiado corta en edición');
+        $('#contrasena').focus();
+        return false;
     }
 
     if ($('input[name="especialidades[]"]:checked').length === 0) {
         alert('Selecciona al menos una especialidad.');
-        valido = false;
+        console.error('No se seleccionó especialidad');
+        return false;
     }
     if ($('input[name="dias[]"]:checked').length === 0) {
         alert('Selecciona al menos un día laborable.');
-        valido = false;
+        console.error('No se seleccionó día laborable');
+        return false;
     }
-    return valido;
+    return true;
 }
 
 // Función reset (llamada desde HTML/JS externo)

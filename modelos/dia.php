@@ -51,9 +51,9 @@ class Dia {
         return $result->fetch_assoc() ?: false;
     }
 
-    // Obtiene todos los días guardados en la base de datos, ordenados por nombre
+    // Obtiene todos los días guardados en la base de datos, ordenados por id
     public function obtenerTodos() {
-        $sql = "SELECT * FROM " . $this->table . " ORDER BY nombre";
+        $sql = "SELECT * FROM " . $this->table . " ORDER BY id";
         $result = $this->conn->query($sql);
         // Devuelve un arreglo con todos los días, o un arreglo vacío si no hay ninguno
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];

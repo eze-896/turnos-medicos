@@ -11,6 +11,7 @@ ini_set('display_errors', 0);
 // Incluye los archivos necesarios para conectarse a la base de datos y manejar usuarios
 include_once '../modelos/conexion.php';
 include_once '../modelos/usuario.php';
+include_once '../modelos/turno.php';  // <-- Incluimos la clase Turno
 
 try {
     // Crea una nueva conexión con la base de datos
@@ -19,6 +20,16 @@ try {
     // Veriica la conexión
     if ($db->connect_error) {
         throw new Exception("Error de conexión a la base de datos: " . $db->connect_error);
+    }
+
+    // Crear instancia Turno y depurar turnos disponibles
+    $turno = new Turno($db);
+    $depuracion = $turno->depurarTurnosDisponibles();
+    if (isset($depuracion['error'])) {
+        error_log("Error al depurar turnos disponibles: " . $depuracion['error']);
+        // No interrumpimos el login, solo registramos el error
+    } else {
+        error_log("Depuración de turnos disponibles: eliminados " . $depuracion['eliminados']);
     }
 
     // Verifica que la solicitud sea un POST

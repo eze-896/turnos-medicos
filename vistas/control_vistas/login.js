@@ -1,14 +1,64 @@
 document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("login-form");
+    const emailInput = document.getElementById("login-email");
+    const passwordInput = document.getElementById("login-password");
+
+    // Crear botón para mostrar/ocultar contraseña
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.textContent = "Mostrar";
+    toggleBtn.style.marginLeft = "10px";
+    toggleBtn.style.cursor = "pointer";
+    toggleBtn.style.padding = "5px 10px";
+    toggleBtn.style.fontSize = "0.9rem";
+
+    // Insertar el botón después del input de contraseña
+    passwordInput.parentNode.appendChild(toggleBtn);
+
+    toggleBtn.addEventListener("click", () => {
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            toggleBtn.textContent = "Ocultar";
+        } else {
+            passwordInput.type = "password";
+            toggleBtn.textContent = "Mostrar";
+        }
+    });
 
     form.addEventListener("submit", async function (e) {
         e.preventDefault();
 
-        const correo = document.getElementById("login-email").value.trim();
-        const password = document.getElementById("login-password").value.trim();
+        const correo = emailInput.value.trim();
+        const password = passwordInput.value;
 
-        if (!correo || !password) {
-            alert("Ingrese correo y contraseña");
+        // Validaciones
+
+        // Correo obligatorio y formato básico válido
+        if (!correo) {
+            alert("El correo electrónico es obligatorio.");
+            console.error("Correo vacío");
+            emailInput.focus();
+            return;
+        }
+        const emailRegex = /^\S+@\S+\.\S+$/;
+        if (!emailRegex.test(correo)) {
+            alert("Ingrese un correo electrónico válido.");
+            console.error("Correo inválido:", correo);
+            emailInput.focus();
+            return;
+        }
+
+        // Contraseña obligatoria y mínimo 8 caracteres
+        if (!password) {
+            alert("La contraseña es obligatoria.");
+            console.error("Contraseña vacía");
+            passwordInput.focus();
+            return;
+        }
+        if (password.length < 8) {
+            alert("La contraseña debe tener al menos 8 caracteres.");
+            console.error("Contraseña demasiado corta");
+            passwordInput.focus();
             return;
         }
 

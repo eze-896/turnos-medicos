@@ -202,5 +202,37 @@ class Turno {
         
         return $result;
     }
+
+/**
+ * Depura la tabla de turnos eliminando los turnos disponibles
+ * que estén antes de la fecha actual o más de 3 meses en el futuro.
+ * Retorna un array con la cantidad de turnos eliminados y posibles errores.
+ */
+public function depurarTurnosDisponibles() {
+    $resultado = ['eliminados' => 0, 'error' => null];
+
+    // Fecha actual y fecha límite (3 meses a futuro)
+    $fecha_actual = date('Y-m-d');
+    $fecha_limite = date('Y-m-d', strtotime('+3 months'));
+
+    // Eliminar turnos disponibles fuera del rango permitido
+    $sql = "DELETE FROM $this->table 
+            WHERE estado = 'disponible' 
+            AND (fecha < ? OR fecha > ?)";
+    $stmt = $this->conn->prepare($sql);
+    if (!$stmt) {
+        $resultado['error'] = "Error preparando la consulta: " . $this->conn->error;
+        return $resultado;
+    }
+    $stmt->bind_param("ss", $fecha_actual, $fecha_limite);
+    if ($stmt->execute()) {
+        $resultado['eliminados'] = $stmt->affected_rows;
+    } else {
+        $resultado['error'] = "Error ejecutando la consulta: " . $stmt->error;
+    }
+    $stmt->close();
+
+    return $resultado;
+}
 }
 ?>
