@@ -9,7 +9,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Hospitale Nika</h1>
+    <h1>Hospital Nika</h1>
     <div class="header">
       <div>
         <button class="month-nav" id="prev-month" aria-label="Mes anterior">&lt;</button>
@@ -21,20 +21,25 @@
     </div>
 
     <div class="filtros">
-      <label>Filtrar por médico:
-        <select id="medico"></select>
-      </label>
+  <label>Filtrar por médico:
+    <select id="medico">
+      <option value="">Seleccione médico</option>
+    </select>
+  </label>
 
-      <label>Especialidad:
-        <select id="especialidad"></select>
-      </label>
+  <label>Especialidad:
+    <select id="especialidad">
+      <option value="">Seleccione especialidad</option>
+    </select>
+  </label>
 
-      <label>Ver mes:
-        <input type="month" id="month-picker" />
-      </label>
+  <label>Ver mes:
+    <input type="month" id="month-picker" />
+  </label>
 
-      <button id="buscar" class="btn">Actualizar</button>
-    </div>
+  <button id="buscar" class="btn">Aplicar Filtros</button>
+  <button id="reset-filtros" class="btn" style="background: #e74c3c;">Resetear Filtros</button>
+</div>
 
     <div class="weekdays">
       <div class="weekday">Dom</div>

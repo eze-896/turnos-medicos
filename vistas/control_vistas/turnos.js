@@ -27,19 +27,65 @@ const TEST_PACIENTE_ID = 1;
   let availabilityMap = {}; // { 'YYYY-MM-DD': count }
   let selectedDate = null;
   let selectedTurnoId = null;
+  let filtrosAplicados = false;
+  let filtroMedico = null;
+  let filtroEspecialidad = null;
 
   // Inicializar controles y calendario
   init();
 
   async function init() {
-    // set month picker default
     monthPicker.value = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
     await loadFilters();
     updateMonthTitle();
-    await loadMonthAvailabilityAndRender();
+
+    // Mostrar calendario solo después de cargar filtros
+    mostrarInterfazFiltros();
     setupListeners();
   }
 
+  function mostrarInterfazFiltros() {
+  // Ocultar calendario inicialmente
+  calendarGrid.style.display = 'none';
+  document.querySelector('.weekdays').style.display = 'none';
+  monthTitle.style.display = 'none';
+  prevMonthBtn.style.display = 'none';
+  nextMonthBtn.style.display = 'none';
+  
+  // Mostrar mensaje instructivo
+  if (!filtrosAplicados) {
+    showMessage('Seleccione filtros y haga clic en "Aplicar Filtros" para ver el calendario', false);
+  }
+}
+
+function aplicarFiltrosYMostrarCalendarios() {
+  // CORREGIR: Asegurar que sean null cuando estén vacíos
+  filtroMedico = medicoSelect.value ? parseInt(medicoSelect.value) : null;
+  filtroEspecialidad = especialidadSelect.value ? parseInt(especialidadSelect.value) : null;
+  filtrosAplicados = true;
+  
+  // LIMPIAR datos anteriores antes de cargar nuevos
+  availabilityMap = {};
+  hideTurnosBox(); // Ocultar cualquier turno flotante abierto
+  
+  console.log('🎯 FILTROS CORREGIDOS:', {
+    medico: filtroMedico, 
+    especialidad: filtroEspecialidad,
+    tipoMedico: typeof filtroMedico,
+    tipoEspecialidad: typeof filtroEspecialidad
+  });
+  
+  // Mostrar elementos del calendario
+  calendarGrid.style.display = 'grid';
+  document.querySelector('.weekdays').style.display = 'grid';
+  monthTitle.style.display = 'block';
+  prevMonthBtn.style.display = 'block';
+  nextMonthBtn.style.display = 'block';
+  
+  // Cargar y renderizar con filtros
+  loadMonthAvailabilityAndRender();
+  showMessage('Filtros aplicados. Los días sin disponibilidad aparecen en rojo.', false);
+}
   function setupListeners() {
     prevMonthBtn.addEventListener('click', async () => {
       if (prevMonthBtn.disabled) return;
@@ -48,31 +94,48 @@ const TEST_PACIENTE_ID = 1;
     nextMonthBtn.addEventListener('click', async () => {
       navigateMonth(1);
     });
-    buscarBtn.addEventListener('click', async () => {
-      // si el usuario cambió mes con el picker, sincronizamos
-      const mp = monthPicker.value;
-      if (mp) {
-        const [y,m] = mp.split('-').map(Number);
-        currentYear = y; currentMonth = m - 1;
-      }
-      await loadMonthAvailabilityAndRender();
-    });
+    buscarBtn.textContent = 'Aplicar Filtros';
+  buscarBtn.addEventListener('click', () => {
+    const mp = monthPicker.value;
+    if (mp) {
+      const [y,m] = mp.split('-').map(Number);
+      currentYear = y; 
+      currentMonth = m - 1;
+      updateMonthTitle();
+    }
+    aplicarFiltrosYMostrarCalendarios();
+  });
     closeTurnosBtn.addEventListener('click', hideTurnosBox);
     cancelBtn.addEventListener('click', hideTurnosBox);
 
-    medicoSelect.addEventListener('change', async () => { await loadMonthAvailabilityAndRender(); });
-    especialidadSelect.addEventListener('change', async () => { await loadMonthAvailabilityAndRender(); });
+    medicoSelect.addEventListener('change', () => {
+    if (filtrosAplicados) {
+      showMessage('Haga clic en "Aplicar Filtros" para actualizar', false);
+    }
+  });
+    especialidadSelect.addEventListener('change', () => {
+    if (filtrosAplicados) {
+      showMessage('Haga clic en "Aplicar Filtros" para actualizar', false);
+    }
+  });
     reservarBtn.addEventListener('click', async () => { await reservarSeleccion(); });
+    document.getElementById('reset-filtros').addEventListener('click', resetearFiltros);
   }
 
   function navigateMonth(delta) {
-    currentMonth += delta;
-    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-    monthPicker.value = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
-    updateMonthTitle();
+  currentMonth += delta;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  monthPicker.value = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
+  updateMonthTitle();
+  
+  // Solo cargar disponibilidad si los filtros están aplicados
+  if (filtrosAplicados) {
     loadMonthAvailabilityAndRender();
+  } else {
+    renderCalendar(); // Renderizar calendario vacío
   }
+}
 
   function updateMonthTitle() {
     const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -83,92 +146,125 @@ const TEST_PACIENTE_ID = 1;
     prevMonthBtn.disabled = currentMonthStart <= new Date(today.getFullYear(), today.getMonth(), 1);
   }
 
-  async function loadFilters() {
-    // cargar medicos
-    try {
-      const resM = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'listar_medicos' })
+async function loadFilters() {
+  // cargar medicos usando turnos.php
+  try {
+    const resM = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'medicos' })
+    });
+    
+    const medicos = await resM.json();
+    medicoSelect.innerHTML = `<option value="">Todos</option>`;
+    
+    if (Array.isArray(medicos)) {
+      console.log('👥 MÉDICOS CARGADOS (ESTRUCTURA):', medicos); // ← Ver la estructura real
+      
+      medicos.forEach(m => {
+        // CORREGIR: Usar id_medico en lugar de id
+        const idMedico = m.id_medico || m.id; // Usa id_medico si existe, sino id
+        const nombre = m.nombre || '';
+        const apellido = m.apellido || '';
+        
+        console.log(`Médico: ID=${idMedico}, Nombre=${nombre}, Apellido=${apellido}`); // ← Debug
+        
+        medicoSelect.innerHTML += `<option value="${idMedico}">${escapeHtml(apellido)}, ${escapeHtml(nombre)}</option>`;
       });
-      const medicos = await resM.json();
-      medicoSelect.innerHTML = `<option value="">Todos</option>`;
-      if (Array.isArray(medicos)) {
-        medicos.forEach(m => {
-          medicoSelect.innerHTML += `<option value="${m.id}">${escapeHtml(m.apellido)}, ${escapeHtml(m.nombre)}</option>`;
-        });
-      }
-    } catch (err) {
-      console.error('No se pudieron cargar médicos:', err);
-      medicoSelect.innerHTML = `<option value="">Todos</option>`;
     }
-
-    // cargar especialidades
-    try {
-      const resE = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'listar_especialidades' })
-      });
-      const esp = await resE.json();
-      especialidadSelect.innerHTML = `<option value="">Todas</option>`;
-      if (Array.isArray(esp)) {
-        esp.forEach(e => {
-          especialidadSelect.innerHTML += `<option value="${e.id}">${escapeHtml(e.nombre)}</option>`;
-        });
-      }
-    } catch (err) {
-      console.error('No se pudieron cargar especialidades:', err);
-      especialidadSelect.innerHTML = `<option value="">Todas</option>`;
-    }
+  } catch (err) {
+    console.error('No se pudieron cargar médicos:', err);
+    medicoSelect.innerHTML = `<option value="">Todos</option>`;
   }
 
+  // cargar especialidades usando turnos.php
+  try {
+    const resE = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'especialidades' })
+    });
+    
+    const esp = await resE.json();
+    especialidadSelect.innerHTML = `<option value="">Todas</option>`;
+    
+    if (Array.isArray(esp)) {
+      esp.forEach(e => {
+        especialidadSelect.innerHTML += `<option value="${e.id}">${escapeHtml(e.nombre)}</option>`;
+      });
+    }
+  } catch (err) {
+    console.error('No se pudieron cargar especialidades:', err);
+    especialidadSelect.innerHTML = `<option value="">Todas</option>`;
+  }
+}
   // Cargar disponibilidad del mes completo desde el backend
   async function loadMonthAvailabilityAndRender() {
-    availabilityMap = {}; // reset
-    showMessage('Cargando disponibilidad...', false);
-    const id_medico = medicoSelect.value || null;
-    const id_especialidad = especialidadSelect.value || null;
-
-    try {
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accion: 'listar_mes',
-          year: currentYear,
-          month: currentMonth + 1,
-          id_medico: id_medico || null,
-          id_especialidad: id_especialidad || null
-        })
-      });
-
-      if (!res.ok) throw new Error('Respuesta no OK');
-
-      const json = await res.json();
-
-      // Aceptar dos formatos: objeto mapa o array
-      if (!json) {
-        availabilityMap = {};
-      } else if (!Array.isArray(json) && typeof json === 'object') {
-        // si es mapa {"YYYY-MM-DD": count}
-        availabilityMap = json;
-      } else if (Array.isArray(json)) {
-        // [{fecha:'YYYY-MM-DD', count:3}, ...]
-        json.forEach(item => {
-          if (item.fecha) availabilityMap[item.fecha] = item.count ?? 0;
-        });
-      }
-
-      renderCalendar();
-      showMessage('', false);
-    } catch (err) {
-      console.warn('listar_mes falló, se renderizará sin recuentos (intenta click en fecha para ver slots).', err);
-      availabilityMap = {}; // fallback: no counts
-      renderCalendar();
-      showMessage('No se pudo cargar el resumen mensual. Intente seleccionar una fecha para ver turnos.', true);
-    }
+  availabilityMap = {};
+  
+  if (!filtrosAplicados) {
+    renderCalendar();
+    return;
   }
+  
+  showMessage('Cargando disponibilidad...', false);
+  
+  // CORREGIR: Asegurar tipos correctos
+  const medicoParam = filtroMedico !== null ? parseInt(filtroMedico) : null;
+  const especialidadParam = filtroEspecialidad !== null ? parseInt(filtroEspecialidad) : null;
+  
+  console.log('🔄 Enviando al backend con tipos correctos:', {
+    medico: medicoParam, 
+    especialidad: especialidadParam,
+    tipoMedico: typeof medicoParam,
+    tipoEspecialidad: typeof especialidadParam
+  });
+  
+  try {
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: 'listar_mes',
+        year: currentYear,
+        month: currentMonth + 1,
+        id_medico: medicoParam,
+        id_especialidad: especialidadParam
+      })
+    });
+
+    if (!res.ok) throw new Error('Respuesta no OK');
+    
+    const json = await res.json();
+    console.log('📊 Datos recibidos del backend:', json);
+    
+    if (!json) {
+      availabilityMap = {};
+      console.log('⚠️ JSON vacío o nulo');
+    } else if (!Array.isArray(json) && typeof json === 'object') {
+      availabilityMap = json;
+      console.log('✅ Mapa de disponibilidad cargado:', availabilityMap);
+    } else if (Array.isArray(json)) {
+      json.forEach(item => {
+        if (item.fecha) availabilityMap[item.fecha] = item.count ?? 0;
+      });
+      console.log('✅ Array de disponibilidad procesado:', availabilityMap);
+    }
+
+    // Contar días con/sin disponibilidad
+    const diasConDisponibilidad = Object.values(availabilityMap).filter(count => count > 0).length;
+    const diasSinDisponibilidad = Object.values(availabilityMap).filter(count => count === 0).length;
+    console.log(`📅 Resumen: ${diasConDisponibilidad} días con disponibilidad, ${diasSinDisponibilidad} días sin disponibilidad`);
+
+    renderCalendar();
+    showMessage('Filtros aplicados. Los días sin disponibilidad aparecen en rojo.', false);
+  } catch (err) {
+    console.error('❌ Error al cargar disponibilidad:', err);
+    availabilityMap = {};
+    renderCalendar();
+    showMessage('Error al cargar disponibilidad. Intente nuevamente.', true);
+  }
+}
 
   // Genera la cuadrícula del mes (matriz 6x7)
   function renderCalendar() {
@@ -216,100 +312,178 @@ const TEST_PACIENTE_ID = 1;
     }
   }
 
-  function createDateCell(day, dateId, otherMonth = false, disabled = false, isToday = false) {
-    const div = document.createElement('div');
-    div.className = 'date-cell';
-    if (otherMonth) div.classList.add('other-month');
-    if (disabled) div.classList.add('disabled');
-    if (isToday) div.classList.add('today');
-    div.id = `cell-${dateId}`;
-    div.dataset.date = dateId;
+function createDateCell(day, dateId, otherMonth = false, disabled = false, isToday = false) {
+  const div = document.createElement('div');
+  div.className = 'date-cell';
+  if (otherMonth) div.classList.add('other-month');
+  if (disabled) div.classList.add('disabled');
+  if (isToday) div.classList.add('today');
+  
+  // VERIFICAR DISPONIBILIDAD CON FILTROS APLICADOS - CORREGIDO
+  const count = availabilityMap[dateId];
+  
+  // CORREGIR: Marcar en rojo cuando los filtros están aplicados Y:
+  // 1. La fecha NO está en el mapa (count === undefined) O
+  // 2. La fecha está en el mapa pero con count === 0
+  const sinDisponibilidad = filtrosAplicados && 
+                           (typeof count === 'undefined' || Number(count) === 0);
+  
+  console.log(`📅 Fecha: ${dateId}, Count: ${count}, Filtros: ${filtrosAplicados}, SinDisponibilidad: ${sinDisponibilidad}`);
+  
+  if (sinDisponibilidad) {
+    console.log(`🔴 Marcando ${dateId} como SIN DISPONIBILIDAD`);
+    div.classList.add('no-availability');
+  }
+  
+  div.id = `cell-${dateId}`;
+  div.dataset.date = dateId;
 
-    const number = document.createElement('div');
-    number.className = 'date-number';
-    number.textContent = day;
-    div.appendChild(number);
+  const number = document.createElement('div');
+  number.className = 'date-number';
+  number.textContent = day;
+  div.appendChild(number);
 
-    if (!disabled && !otherMonth) {
-      div.addEventListener('click', () => onDateClick(dateId, div));
-    }
-    return div;
+  // Agregar indicador de disponibilidad solo si hay disponibilidad
+  if (typeof count !== 'undefined' && Number(count) > 0) {
+    console.log(`🟢 ${dateId} tiene ${count} turnos disponibles`);
+    addSelectionIndicator(div, Number(count));
   }
 
-  async function onDateClick(dateId, cellElement) {
-    selectedDate = dateId;
-    // marcar seleccionado visualmente
-    [...document.querySelectorAll('.date-cell.selected')].forEach(n => n.classList.remove('selected'));
-    cellElement.classList.add('selected');
-
-    // solicitar listados de turnos para esa fecha
-    showTurnosLoading(true);
-    try {
-      const id_medico = medicoSelect.value || null;
-      const id_especialidad = especialidadSelect.value || null;
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'listar', fecha: dateId, id_medico: id_medico || null, id_especialidad: id_especialidad || null })
-      });
-      const turnos = await res.json();
-      renderTurnosList(turnos);
-      positionTurnosBox(cellElement);
-      showTurnosLoading(false);
-    } catch (err) {
-      console.error('Error al obtener turnos:', err);
-      renderTurnosList([]);
-      positionTurnosBox(cellElement);
-      showTurnosLoading(false);
-      showMessage('Error al cargar turnos de la fecha seleccionada.', true);
-    }
+  if (!disabled && !otherMonth && !sinDisponibilidad) {
+    div.addEventListener('click', () => onDateClick(dateId, div));
+  } else if (sinDisponibilidad) {
+    // Agregar tooltip para explicar por qué está bloqueado
+    div.title = 'Sin turnos disponibles con los filtros actuales';
+    div.style.cursor = 'not-allowed';
   }
+  
+  return div;
+}
 
-  function renderTurnosList(turnos) {
-    turnosList.innerHTML = '';
-    selectedTurnoId = null;
-    reservarBtn.disabled = true;
+function resetearFiltros() {
+  medicoSelect.value = '';
+  especialidadSelect.value = '';
+  monthPicker.value = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
+  filtrosAplicados = false;
+  filtroMedico = null;
+  filtroEspecialidad = null;
+  availabilityMap = {}; // LIMPIAR el mapa de disponibilidad
+  
+  // Ocultar calendario y mostrar interfaz de filtros
+  mostrarInterfazFiltros();
+  
+  // Limpiar cualquier selección existente
+  hideTurnosBox();
+  
+  // FORZAR re-render del calendario para quitar colores
+  renderCalendar();
+  
+  showMessage('Filtros reseteados. Aplique nuevos filtros para ver el calendario.', false);
+}
 
-    if (!Array.isArray(turnos) || turnos.length === 0) {
-      turnosList.innerHTML = '<p>No hay turnos para esta fecha</p>';
-      turnosBox.style.display = 'block';
-      turnosBox.setAttribute('aria-hidden', 'false');
-      return;
-    }
+async function onDateClick(dateId, cellElement) {
+  selectedDate = dateId;
+  // marcar seleccionado visualmente
+  [...document.querySelectorAll('.date-cell.selected')].forEach(n => n.classList.remove('selected'));
+  cellElement.classList.add('selected');
 
-    turnos.forEach(t => {
-      const item = document.createElement('div');
-      item.className = 'turno-item';
-      if (t.estado !== 'disponible') item.classList.add('disabled');
-
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'selected_turno';
-      radio.value = t.id;
-      radio.disabled = (t.estado !== 'disponible');
-      radio.id = `t-${t.id}`;
-      radio.addEventListener('change', () => {
-        selectedTurnoId = parseInt(radio.value, 10);
-        reservarBtn.disabled = !selectedTurnoId;
-      });
-
-      const hora = document.createElement('div');
-      hora.className = 'turno-hora';
-      hora.textContent = t.hora_inicio;
-
-      const nombre = document.createElement('div');
-      nombre.style.marginLeft = '8px';
-      nombre.textContent = `${t.medico_apellido || ''} ${t.medico_nombre || ''}`;
-
-      item.appendChild(radio);
-      item.appendChild(hora);
-      item.appendChild(nombre);
-      turnosList.appendChild(item);
+  // solicitar listados de turnos para esa fecha - USAR FILTROS APLICADOS
+  showTurnosLoading(true);
+  try {
+    // CORREGIR: Usar los filtros ya aplicados, no los valores actuales del select
+    const id_medico = filtroMedico;
+    const id_especialidad = filtroEspecialidad;
+    
+    console.log('🔍 Buscando turnos con filtros:', {
+      fecha: dateId,
+      medico: id_medico,
+      especialidad: id_especialidad
     });
+    
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        accion: 'listar', 
+        fecha: dateId, 
+        id_medico: id_medico,
+        id_especialidad: id_especialidad
+      })
+    });
+    
+    const turnos = await res.json();
+    console.log('📋 Turnos encontrados:', turnos);
+    
+    renderTurnosList(turnos);
+    positionTurnosBox(cellElement);
+    showTurnosLoading(false);
+  } catch (err) {
+    console.error('Error al obtener turnos:', err);
+    renderTurnosList([]);
+    positionTurnosBox(cellElement);
+    showTurnosLoading(false);
+    showMessage('Error al cargar turnos de la fecha seleccionada.', true);
+  }
+}
 
+function renderTurnosList(turnos) {
+  turnosList.innerHTML = '';
+  selectedTurnoId = null;
+  reservarBtn.disabled = true;
+
+  if (!Array.isArray(turnos) || turnos.length === 0) {
+    // MEJORAR mensaje para incluir información de filtros
+    let mensaje = 'No hay turnos para esta fecha';
+    if (filtroMedico || filtroEspecialidad) {
+      mensaje += ' con los filtros aplicados';
+    }
+    turnosList.innerHTML = `<p>${mensaje}</p>`;
     turnosBox.style.display = 'block';
     turnosBox.setAttribute('aria-hidden', 'false');
+    return;
   }
+
+  turnos.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'turno-item';
+    if (t.estado !== 'disponible') item.classList.add('disabled');
+
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'selected_turno';
+    radio.value = t.id;
+    radio.disabled = (t.estado !== 'disponible');
+    radio.id = `t-${t.id}`;
+    radio.addEventListener('change', () => {
+      selectedTurnoId = parseInt(radio.value, 10);
+      reservarBtn.disabled = !selectedTurnoId;
+    });
+
+    const hora = document.createElement('div');
+    hora.className = 'turno-hora';
+    hora.textContent = t.hora_inicio;
+
+    const nombre = document.createElement('div');
+    nombre.style.marginLeft = '8px';
+    nombre.textContent = `${t.medico_apellido || ''} ${t.medico_nombre || ''}`;
+    
+    // Agregar información de estado
+    const estado = document.createElement('div');
+    estado.style.marginLeft = 'auto';
+    estado.style.fontSize = '0.8em';
+    estado.style.color = t.estado === 'disponible' ? '#27ae60' : '#e74c3c';
+    estado.textContent = t.estado === 'disponible' ? 'Disponible' : 'No disponible';
+    
+    item.appendChild(radio);
+    item.appendChild(hora);
+    item.appendChild(nombre);
+    item.appendChild(estado);
+    turnosList.appendChild(item);
+  });
+
+  turnosBox.style.display = 'block';
+  turnosBox.setAttribute('aria-hidden', 'false');
+}
 
   function positionTurnosBox(cellElement) {
     const rect = cellElement.getBoundingClientRect();
@@ -388,6 +562,37 @@ const TEST_PACIENTE_ID = 1;
     const d = String(date.getDate()).padStart(2,'0');
     return `${y}-${m}-${d}`;
   }
+
+  // Agrega esta función temporal para testear
+async function testBackend() {
+  console.log('🧪 TESTEANDO BACKEND...');
+  
+  try {
+    const testData = {
+      accion: 'listar_mes',
+      year: currentYear,
+      month: currentMonth + 1,
+      id_medico: filtroMedico,
+      id_especialidad: filtroEspecialidad
+    };
+    
+    console.log('📤 Enviando al backend:', testData);
+    
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testData)
+    });
+    
+    console.log('📥 Respuesta HTTP:', res.status, res.statusText);
+    const data = await res.json();
+    console.log('📊 Datos recibidos:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('❌ Error en test:', error);
+  }
+}
 
   // indicador pequeño
   function addSelectionIndicator(cell, count) {

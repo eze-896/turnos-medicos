@@ -1,84 +1,383 @@
 /* Base y layout (adaptado del ejemplo que compartiste) */
-*{box-sizing:border-box;margin:0;padding:0;font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
-body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh;background:linear-gradient(135deg,#f0f4ff 0%,#eef7f2 100%);padding:24px;color:#222;}
-.container{width:100%;max-width:980px;background:#fff;border-radius:12px;box-shadow:0 12px 30px rgba(9,30,66,.08);padding:20px;position:relative;}
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid #f0f4f8;}
-.month-nav{background:none;border:1px solid #e6eefb;color:#1e66d0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:18px}
-.month-nav:disabled{opacity:.4;cursor:not-allowed}
-.month-title{font-size:1.6rem;color:#1e66d0;font-weight:600;text-align:center;}
-.filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0;}
-.filtros label{font-size:0.95rem;color:#444;display:flex;align-items:center;gap:8px;}
-.filtros select, .filtros input[type="month"]{padding:6px 8px;border-radius:6px;border:1px solid #dfe9f6;background:#fff}
-.btn{padding:8px 12px;border-radius:8px;border:none;background:#1e66d0;color:white;cursor:pointer}
-.weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-weight:700;margin-bottom:10px;color:#666;background:#fafafa;border-radius:8px;padding:8px;}
-.weekday{padding:6px 0}
-.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
-.date-cell{min-height:90px;padding:10px;border:1px solid #eef3fb;border-radius:10px;background:#fff;display:flex;flex-direction:column;position:relative;cursor:pointer;transition:all .12s}
-.date-cell.other-month{background:#f9fafb;color:#bdbdbd;cursor:default}
-.date-number{font-size:1.05rem;font-weight:600;margin-bottom:6px}
-.selection-indicator{position:absolute;bottom:8px;right:8px;width:22px;height:22px;border-radius:50%;background:#27ae60;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700}
-.date-cell.disabled{opacity:.5;cursor:not-allowed;background:#fbfbfb}
-.date-cell.today{border:2px solid #1e66d0}
-.date-cell.selected{background:#1e66d0;color:#fff;border-color:#184f9a;transform:translateY(-4px)}
-.turnos-flotante{display:none;position:absolute;background:#fff;border-radius:10px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,0.12);width:320px;z-index:40;border:2px solid #1e66d0}
-.turnos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.turnos-title{font-weight:700;color:#1e66d0}
-.close-turnos{background:none;border:none;font-size:18px;cursor:pointer;color:#666}
-.turnos-list{max-height:260px;overflow:auto;padding-right:6px;margin-bottom:8px}
-.turno-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;border:1px solid #f0f2f7;margin-bottom:6px}
-.turno-item.disabled{opacity:.6}
-.turno-hora{font-weight:600}
-.submit-turnos{padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(135deg,#1e66d0,#0d47a1);color:#fff;cursor:pointer}
-.submit-turnos:disabled{opacity:.6;cursor:not-allowed;background:#ccc}
-#message{margin-top:10px;color:#333;min-height:20px}
-@media (max-width:760px){
-  .turnos-flotante{width:90%}
-  .date-cell{min-height:72px;padding:8px}
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0f4ff 0%, #eef7f2 100%);
+    padding: 24px;
+    color: #222;
+}
+
+.container {
+    width: 100%;
+    max-width: 980px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(9, 30, 66, .08);
+    padding: 20px;
+    position: relative;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0f4f8;
+}
+
+.month-nav {
+    background: none;
+    border: 1px solid #e6eefb;
+    color: #1e66d0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.month-nav:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.month-title {
+    font-size: 1.6rem;
+    color: #1e66d0;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Estilos para la interfaz de filtros */
+.filtros {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: end;
+}
+
+.filtros label {
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+    min-width: 150px;
+}
+
+.filtros select, 
+.filtros input[type="month"] {
+    margin-top: 5px;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+#buscar {
+    background: #3498db;
+    color: white;
+}
+
+#reset-filtros {
+    background: #e74c3c;
+    color: white;
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #666;
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.weekday {
+    padding: 6px 0;
+}
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.date-cell {
+    min-height: 90px;
+    padding: 10px;
+    border: 1px solid #eef3fb;
+    border-radius: 10px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    cursor: pointer;
+    transition: all .12s;
+}
+
+.date-cell.other-month {
+    background: #f9fafb;
+    color: #bdbdbd;
+    cursor: default;
+}
+
+.date-number {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.selection-indicator {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #27ae60;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.date-cell.disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    background: #fbfbfb;
+}
+
+.date-cell.today {
+    border: 2px solid #1e66d0;
+}
+
+.date-cell.selected {
+    background: #1e66d0;
+    color: #fff;
+    border-color: #184f9a;
+    transform: translateY(-4px);
+}
+
+/* Estilos para celdas sin disponibilidad */
+.date-cell.no-availability {
+    background-color: #ffebee !important;
+    border: 2px solid #e74c3c !important;
+    color: #c0392b !important;
+    cursor: not-allowed !important;
+}
+
+.date-cell.no-availability .date-number {
+    color: #c0392b !important;
+    text-decoration: line-through;
+}
+
+.turnos-flotante {
+    display: none;
+    position: absolute;
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    width: 320px;
+    z-index: 40;
+    border: 2px solid #1e66d0;
+}
+
+.turnos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.turnos-title {
+    font-weight: 700;
+    color: #1e66d0;
+}
+
+.close-turnos {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #666;
+}
+
+.turnos-list {
+    max-height: 260px;
+    overflow: auto;
+    padding-right: 6px;
+    margin-bottom: 8px;
+}
+
+.turno-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #f0f2f7;
+    margin-bottom: 6px;
+}
+
+.turno-item.disabled {
+    opacity: .6;
+}
+
+.turno-hora {
+    font-weight: 600;
+}
+
+.submit-turnos {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #1e66d0, #0d47a1);
+    color: #fff;
+    cursor: pointer;
+}
+
+.submit-turnos:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    background: #ccc;
+}
+
+#message {
+    margin-top: 10px;
+    color: #333;
+    min-height: 20px;
+}
+
+/* Mensaje instructivo */
+.instruction-message {
+    background: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    margin: 20px 0;
+    color: #1565c0;
+}
+
+/* Estilos para calendario alternativo (si lo necesitas) */
 #calendario-turnos {
-  margin-top: 20px;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 5px;
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
 }
 
 #calendario-turnos div {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: center;
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
 }
 
 #calendario-turnos .header {
-  font-weight: bold;
-  background: #f2f2f2;
+    font-weight: bold;
+    background: #f2f2f2;
 }
 
 .turno-disponible {
-  background: #d4fcd4;
+    background: #d4fcd4;
 }
 
 .turno-reservado {
-  background: #fcd4d4;
+    background: #fcd4d4;
 }
 
 .turno-ocupado {
-  background: #ffeaa7;
+    background: #ffeaa7;
 }
 
 /* Modal */
 .modal {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-content {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  min-width: 300px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    min-width: 300px;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+    .turnos-flotante {
+        width: 90%;
+    }
+    
+    .date-cell {
+        min-height: 72px;
+        padding: 8px;
+    }
+    
+    .filtros {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filtros label {
+        min-width: auto;
+    }
+}
+
+/* Estilos para debugging */
+.debug-indicator {
+  display: none; /* Ocultar en producción */
+}
+
+/* Para testing, puedes mostrar el indicador debug */
+.date-cell.no-availability .debug-indicator {
+  display: block;
+}
+
+/* Asegurar que los estilos de no-disponibilidad sean fuertes */
+.date-cell.no-availability {
+  background-color: #ffebee !important;
+  border: 2px solid #e74c3c !important;
+  color: #c0392b !important;
+  cursor: not-allowed !important;
+}
+
+.date-cell.no-availability .date-number {
+  color: #c0392b !important;
+  text-decoration: line-through;
+  font-weight: bold;
 }

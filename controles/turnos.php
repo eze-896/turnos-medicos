@@ -42,42 +42,80 @@ switch ($accion) {
         break;
 
     // Listar disponibilidad por mes (para mostrar en el calendario)
-    case "listar_mes":
-        $year = (int) ($data["year"] ?? date('Y'));
-        $month = (int) ($data["month"] ?? date('m'));
-        $id_medico = !empty($data["id_medico"]) ? (int) $data["id_medico"] : null;
-        $id_especialidad = !empty($data["id_especialidad"]) ? (int) $data["id_especialidad"] : null;
+case "listar_mes":
+    $year = (int) ($data["year"] ?? date('Y'));
+    $month = (int) ($data["month"] ?? date('m'));
+    
+    // DEBUG DETALLADO
+    error_log("=== listar_mes INICIO ===");
+    error_log("Datos recibidos: " . json_encode($data));
+    
+    $id_medico = isset($data["id_medico"]) && $data["id_medico"] !== null && $data["id_medico"] !== 'undefined' && $data["id_medico"] !== '' 
+        ? (int) $data["id_medico"] 
+        : null;
+    $id_especialidad = isset($data["id_especialidad"]) && $data["id_especialidad"] !== null && $data["id_especialidad"] !== 'undefined' && $data["id_especialidad"] !== '' 
+        ? (int) $data["id_especialidad"] 
+        : null;
 
-        // Valida que el año y el mes sean correctos
-        if ($year < 2020 || $year > 2030 || $month < 1 || $month > 12) {
-            echo json_encode(["error" => "Fecha inválida"]);
-            break;
-        }
+    error_log("Filtros procesados - Médico: " . ($id_medico ?? 'NULL') . ", Especialidad: " . ($id_especialidad ?? 'NULL'));
 
-        try {
-            // Calcula el rango de fechas para el mes solicitado
-            $fecha_inicio = sprintf("%04d-%02d-01", $year, $month);
-            $fecha_fin = date("Y-m-t", strtotime($fecha_inicio));
-            
-            // Obtiene todos los turnos disponibles del mes
-            $turnos = $turnoModel->listarDisponibles($fecha_inicio, $id_medico, $id_especialidad);
-            
-            // Cuenta cuántos turnos hay por cada día
-            $disponibilidad = [];
-            foreach ($turnos as $turno) {
-                $fecha = date("Y-m-d", strtotime($turno['fecha_hora']));
-                if (!isset($disponibilidad[$fecha])) {
-                    $disponibilidad[$fecha] = 0;
-                }
-                $disponibilidad[$fecha]++;
-            }
-            
-            // Devuelve la cantidad de turnos disponibles por día
-            echo json_encode($disponibilidad);
-        } catch (Exception $e) {
-            echo json_encode(["error" => "Error al obtener disponibilidad: " . $e->getMessage()]);
+    try {
+        $fecha_inicio = sprintf("%04d-%02d-01", $year, $month);
+        $fecha_fin = date("Y-m-t", strtotime($fecha_inicio));
+        
+        // CONSULTA CORREGIDA CON DEBUG
+        $sql = "SELECT t.fecha, COUNT(*) as count 
+                FROM turnos t 
+                JOIN medico m ON t.id_medico = m.id 
+                WHERE t.estado = 'disponible' 
+                AND t.fecha BETWEEN ? AND ?";
+        
+        $params = [$fecha_inicio, $fecha_fin];
+        $types = "ss";
+        
+        error_log("Consulta base: " . $sql);
+        
+        if ($id_medico) {
+            $sql .= " AND t.id_medico = ?";
+            $params[] = $id_medico;
+            $types .= "i";
+            error_log("➕ Agregando filtro médico: " . $id_medico);
         }
-        break;
+        
+        if ($id_especialidad) {
+            $sql .= " AND t.id_medico IN (SELECT me.id_medico FROM medico_especialidad me WHERE me.id_especialidad = ?)";
+            $params[] = $id_especialidad;
+            $types .= "i";
+            error_log("➕ Agregando filtro especialidad: " . $id_especialidad);
+        }
+        
+        $sql .= " GROUP BY t.fecha ORDER BY t.fecha";
+        
+        error_log("Consulta final: " . $sql);
+        error_log("Parámetros: " . json_encode($params));
+        error_log("Tipos: " . $types);
+        
+        $stmt = $db->prepare($sql);
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $disponibilidad = [];
+        while ($row = $result->fetch_assoc()) {
+            $disponibilidad[$row['fecha']] = (int)$row['count'];
+        }
+        
+        error_log("Disponibilidad calculada: " . json_encode($disponibilidad));
+        error_log("=== listar_mes FIN ===");
+        
+        echo json_encode($disponibilidad);
+    } catch (Exception $e) {
+        error_log("❌ Error en listar_mes: " . $e->getMessage());
+        echo json_encode(["error" => "Error al obtener disponibilidad: " . $e->getMessage()]);
+    }
+    break;
     
     // Reservar un turno para el paciente logueado
     case "reservar":
