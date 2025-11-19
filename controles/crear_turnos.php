@@ -7,7 +7,6 @@ require_once '../modelos/turno.php';
 
 // Comprueba si se enviaron los datos usando el método POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    // Si no es POST, responde diciendo que el método no está permitido
     echo json_encode(['exito' => false, 'mensaje' => 'Método no permitido']);
     exit;
 }
@@ -15,76 +14,135 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Toma el id del médico que llega y lo convierte en número
 $id_medico = intval($_POST['id_medico'] ?? 0);
 
-// Toma la fecha que la secretaría selecciona para los turnos
-$fecha = $_POST['fecha'] ?? '';
+// Toma la fecha BASE que la secretaría selecciona para determinar el mes
+$fecha_base = $_POST['fecha'] ?? '';
 
 // Toma la lista de horas que la secretaria selecciona para los turnos
-$horas = $_POST['horas'] ?? []; // Por ejemplo: ['08:00', '09:00']
+$horas = $_POST['horas'] ?? [];
 
-// Verifica que la secretaria haya enviado todos los datos necesarios y que sean correctos
-if (!$id_medico || !$fecha || empty($horas) || !is_array($horas)) {
-    // Si falta algún dato, responde diciendo que los datos son inválidos
-    echo json_encode(['exito' => false, 'mensaje' => 'Datos inválidos']);
+// Verifica que la secretaria haya enviado todos los datos necesarios
+if (!$id_medico || !$fecha_base || empty($horas) || !is_array($horas)) {
+    echo json_encode(['exito' => false, 'mensaje' => 'Datos inválidos: médico, fecha y horas son requeridos']);
     exit;
 }
 
-// Comprueba que la fecha elegida sea futura
-if (strtotime($fecha) <= time()) {
-    // Si la fecha no es válida, responde diciendo que debe ser futura
-    echo json_encode(['exito' => false, 'mensaje' => 'La fecha debe ser futura']);
+// Comprueba que la fecha base sea futura
+if (strtotime($fecha_base) < strtotime(date('Y-m-d'))) {
+    echo json_encode(['exito' => false, 'mensaje' => 'La fecha debe ser actual o futura']);
     exit;
 }
 
 // Crea una nueva conexión con la base de datos
 $conexion = new Conexion();
-
 $db = $conexion->conectar();
 
-// Verifica que la conexión sea exitosa
 if (!$db) {
-    echo json_encode(['exito' => false, 'mensaje' => 'Error en conexión.']);
+    echo json_encode(['exito' => false, 'mensaje' => 'Error en conexión a la base de datos']);
     exit;
 }
 
 // Crea un nuevo objeto Turno
 $turno = new Turno($db);
 
-// Inicializa contadores para llevar la cuenta de éxitos y errores
+// Obtener días laborables del médico
+$sql_dias = "SELECT id_dia FROM medico_dia WHERE id_medico = ?";
+$stmt_dias = $db->prepare($sql_dias);
+$stmt_dias->bind_param("i", $id_medico);
+$stmt_dias->execute();
+$result_dias = $stmt_dias->get_result();
+
+$dias_laborables = [];
+while ($row = $result_dias->fetch_assoc()) {
+    $dias_laborables[] = $row['id_dia'];
+}
+
+if (empty($dias_laborables)) {
+    echo json_encode(['exito' => false, 'mensaje' => 'El médico no tiene días laborables configurados']);
+    exit;
+}
+
+// Calcular rango del mes
+$year = date('Y', strtotime($fecha_base));
+$month = date('m', strtotime($fecha_base));
+$fecha_inicio = "$year-$month-01";
+$fecha_fin = date("Y-m-t", strtotime($fecha_inicio));
+
 $exitos = 0;
 $errores = [];
+$total_turnos_creados = 0;
+$dias_procesados = 0;
 
-// Recorre cada hora que la secretaria selecciona para crear los turnos uno por uno
-foreach ($horas as $hora) {
-    // Verifica que la hora tenga el formato correcto (por ejemplo, 08:00)
-    if (!preg_match('/^\d{2}:\d{2}$/', $hora)) {
-        // Si la hora no es válida, la agrega a la lista de errores
-        $errores[] = "Hora inválida: $hora";
-        continue;
+// Recorrer todos los días del mes
+$fecha_actual = $fecha_inicio;
+while (strtotime($fecha_actual) <= strtotime($fecha_fin)) {
+    
+    // Verificar si es día laborable (1=Lunes, 7=Domingo)
+    $dia_semana = date('N', strtotime($fecha_actual));
+    
+    if (in_array($dia_semana, $dias_laborables) && strtotime($fecha_actual) >= strtotime(date('Y-m-d'))) {
+        $dias_procesados++;
+        
+        // Para cada día laborable, crear turnos en las horas seleccionadas
+        foreach ($horas as $hora) {
+            // Verificar que la hora tenga el formato correcto
+            if (!preg_match('/^\d{2}:\d{2}$/', $hora)) {
+                $errores[] = "Hora inválida: $hora en $fecha_actual";
+                continue;
+            }
+            
+            // Crear el turno para este día y hora
+            $resultado = $turno->crear($id_medico, $fecha_actual, $hora);
+            
+            if (isset($resultado['exito']) && $resultado['exito']) {
+                $exitos++;
+                $total_turnos_creados++;
+            } else {
+                // Solo registrar errores que no sean por duplicados
+                if (strpos($resultado['error'] ?? '', 'Ya existe') === false) {
+                    $errores[] = "$fecha_actual $hora: " . ($resultado['error'] ?? 'Error desconocido');
+                }
+            }
+        }
     }
     
-    // Intenta crear el turno para el médico, la fecha y la hora indicadas
-    $resultado = $turno->crear($id_medico, $fecha, $hora);
-    
-    // Si el turno se crea correctamente, suma uno al contador de éxitos
-    if (isset($resultado['exito']) && $resultado['exito']) {
-        $exitos++;
-    } else {
-        // Si ocurre un error, lo agrega a la lista de errores
-        $errores[] = "Hora $hora: " . ($resultado['error'] ?? 'Error desconocido');
-    }
+    // Siguiente día
+    $fecha_actual = date('Y-m-d', strtotime($fecha_actual . ' +1 day'));
 }
 
-// Prepara un mensaje para informar cuántos turnos se crean y si hay errores
-$mensaje = "Creados $exitos turnos de " . count($horas) . ". " . (empty($errores) ? 'Todos exitosos.' : 'Errores: ' . implode('; ', $errores));
+// Preparar mensaje de resultado
+$mensaje = "Proceso completado. ";
+if ($total_turnos_creados > 0) {
+    $mensaje .= "✅ Se crearon $total_turnos_creados turnos exitosamente. ";
+}
+$mensaje .= "Días laborables procesados: $dias_procesados. ";
+$mensaje .= "Horarios por día: " . count($horas) . ". ";
 
-// Envía la respuesta final en formato JSON, indicando si hay éxito o no y mostrando el mensaje
-if ($exitos > 0) {
-    echo json_encode(['exito' => true, 'mensaje' => $mensaje]);
+if (!empty($errores)) {
+    $mensaje .= "⚠️ Se encontraron " . count($errores) . " errores: " . implode('; ', array_slice($errores, 0, 3));
+    if (count($errores) > 3) {
+        $mensaje .= "... (y " . (count($errores) - 3) . " más)";
+    }
 } else {
-    echo json_encode(['exito' => false, 'mensaje' => $mensaje]);
+    $mensaje .= "✅ Todos los turnos se crearon correctamente.";
 }
 
-// Cierra la conexión a la base de datos si está abierta
+// Enviar respuesta
+if ($total_turnos_creados > 0) {
+    echo json_encode([
+        'exito' => true, 
+        'mensaje' => $mensaje, 
+        'total_turnos' => $total_turnos_creados,
+        'dias_procesados' => $dias_procesados
+    ]);
+} else {
+    echo json_encode([
+        'exito' => false, 
+        'mensaje' => $mensaje,
+        'dias_procesados' => $dias_procesados
+    ]);
+}
+
+// Cerrar conexión
 if (isset($db) && $db instanceof mysqli) {
     $db->close();
 }

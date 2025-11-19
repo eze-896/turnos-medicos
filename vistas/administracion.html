@@ -16,6 +16,7 @@
         <ul>
             <li><a href="#" onclick="mostrarSeccion('agregar-medico')">Agregar Médico</a></li>
             <li><a href="#" onclick="mostrarSeccion('gestionar-medicos')">Gestionar Médicos</a></li>
+            <li><a href="#" onclick="mostrarSeccion('agregar-secretaria')">Agregar Secretarias</a></li>
         </ul>
     </nav>
 
@@ -94,16 +95,53 @@
     </div>
 </div>
 
+    <!-- Sección para Agregar Secretaria -->
+<div id="seccion-agregar-secretaria" class="seccion" style="display: none;">
+    <div id="form-container">
+        <h2 id="form-titulo-secretaria">Agregar Nueva Secretaria</h2>
+        <button type="button" id="volver-lista-secretaria" onclick="mostrarSeccion('gestionar-medicos')" style="display: none;">Volver a Lista</button>
+        <form id="form-registro-secretaria">
+            <input type="hidden" id="id_secretaria" name="id_secretaria" value=""> <!-- Para modo edit -->
+            <fieldset>
+                <legend>Datos Personales</legend>
+                <label for="dni_secretaria">DNI:</label>
+                <input type="text" id="dni_secretaria" name="dni" placeholder="DNI" required maxlength="8">
+                <br>
+                <label for="nombre_secretaria">Nombre:</label>
+                <input type="text" id="nombre_secretaria" name="nombre" placeholder="Nombre" required maxlength="50">
+                <br>
+                <label for="apellido_secretaria">Apellido:</label>
+                <input type="text" id="apellido_secretaria" name="apellido" placeholder="Apellido" required maxlength="50">
+                <br>
+                <label for="email_secretaria">Email:</label>
+                <input type="email" id="email_secretaria" name="email" placeholder="Email" required>
+                <br>
+                <label for="contrasena_secretaria">Contraseña:</label>
+                <input type="password" id="contrasena_secretaria" name="contrasena" placeholder="Contraseña" required minlength="8">
+                <br>
+                <label for="telefono_secretaria">Teléfono:</label>
+                <input type="tel" id="telefono_secretaria" name="telefono" placeholder="Teléfono" required maxlength="10">
+                <br>
+            </fieldset>
+
+            <button type="submit" id="btn-submit-secretaria">Registrar Secretaria</button>
+        </form>
+        <div id="mensaje-respuesta-secretaria"></div>
+    </div>
+</div>
+
     <script src="control_vistas/registro_medico.js"></script>
     <script src="control_vistas/gestionar_medicos.js"></script>
+    <script src="control_vistas/registro_secretaria.js"></script>
+
     <script>
     // Función modular para mostrar secciones (MODIFICADA: No recarga checkboxes en edit)
     function mostrarSeccion(seccionId) {
         const secciones = document.querySelectorAll('.seccion');
         secciones.forEach(secc => secc.style.display = 'none');
         document.getElementById('seccion-' + seccionId).style.display = 'block';
-        
-        if (seccionId === 'gestionar-medicos') {
+        if (seccionId === 'agregar-secretaria'){
+        } else if (seccionId === 'gestionar-medicos') {
             cargarTablaMedicos(); // Cargar tabla al mostrar
         } else if (seccionId === 'agregar-medico') {
             // Verifica si es modo edit

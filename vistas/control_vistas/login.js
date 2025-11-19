@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 alert(result.message);
                 if (result.rol === 'secretaria') window.location.href = "../vistas/administracion.html";
                 else if (result.rol === 'medico') window.location.href = "../vistas/medico.html";
-                else window.location.href = "../vistas/index.html";
+                else window.location.href = "../vistas/dashboard.html";
             } else {
                 alert(result.message);
                 if (result.error) console.error("Error detallado:", result.error);

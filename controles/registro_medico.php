@@ -75,7 +75,6 @@ try {
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errores[] = 'Email inválido.';
     if (!$esEdit && (empty($contrasena) || strlen($contrasena) < 8)) $errores[] = 'Contraseña requerida (mín. 8 chars).';
     if ($esEdit && !empty($contrasena) && strlen($contrasena) < 8) $errores[] = 'Nueva contraseña inválida.';
-    if (empty($telefono) || !ctype_digit($telefono) || strlen($telefono) !== 10) $errores[] = 'Teléfono inválido.';
     if (empty($especialidades)) $errores[] = 'Selecciona al menos una especialidad.';
     if (empty($dias)) $errores[] = 'Selecciona al menos un día.';
 

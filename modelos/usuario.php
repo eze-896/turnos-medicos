@@ -42,16 +42,26 @@ class Usuario {
 
     // Registra un nuevo usuario en la base de datos
     public function registrar() {
-        $sql = "INSERT INTO " . $this->table . " (dni, nombre, apellido, email, contrasena, rol, telefono) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sssssis", $this->dni, $this->nombre, $this->apellido, $this->email, $this->contrasena, $this->rol, $this->telefono); // Corregido: DNI string, telefono string
-        if ($stmt->execute()) {
-            $this->id = $this->conn->insert_id;
-            return true;
-        }
+    $sql = "INSERT INTO " . $this->table . " (dni, nombre, apellido, email, contrasena, rol, telefono) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $this->conn->prepare($sql);
+    
+    if (!$stmt) {
+        error_log("Error en preparar consulta: " . $this->conn->error);
         return false;
     }
+    
+    // CORREGIR: Cambiar "sssssis" por "sssssss" - todos son strings
+    $stmt->bind_param("sssssss", $this->dni, $this->nombre, $this->apellido, $this->email, $this->contrasena, $this->rol, $this->telefono);
+    
+    if ($stmt->execute()) {
+        $this->id = $this->conn->insert_id;
+        return true;
+    } else {
+        error_log("Error al ejecutar consulta: " . $stmt->error);
+        return false;
+    }
+}
 
     // Busca un usuario por su correo electrónico y devuelve sus datos
     public function buscarPorEmail($email) {

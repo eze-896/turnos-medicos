@@ -9,7 +9,6 @@ error_reporting(E_ALL);
 // Incluye clases necesarias
 include_once '../modelos/conexion.php';
 include_once '../modelos/usuario.php';
-include_once '../modelos/paciente.php';
 
 // Configura MySQLi para lanzar excepciones
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -26,10 +25,10 @@ try {
     }
 
     // DEBUG: Ver qué campos están llegando
-    error_log("Campos POST recibidos: " . print_r($_POST, true));
+    error_log("Campos POST recibidos para secretaria: " . print_r($_POST, true));
 
-    // Establecer rol por defecto como 'paciente'
-    $rol = 'paciente'; // Valor por defecto
+    // Establecer rol como 'secretaria'
+    $rol = 'secretaria';
 
     $usuario = new Usuario($db);
     $usuario->dni = $_POST['dni'] ?? '';
@@ -37,14 +36,13 @@ try {
     $usuario->apellido = $_POST['apellido'] ?? '';
     $usuario->email = $_POST['email'] ?? '';
     
-    // CORREGIR: usar 'contraseña' en lugar de 'contrasena'
-    $contrasena = $_POST['contraseña'] ?? '';
+    $contrasena = $_POST['contrasena'] ?? '';
     $usuario->contrasena = password_hash($contrasena, PASSWORD_DEFAULT);
     
-    $usuario->rol = $rol; // Siempre será 'paciente'
-    $usuario->telefono = $_POST['telefono'] ?? null;
+    $usuario->rol = $rol;
+    $usuario->telefono = $_POST['telefono'] ?? '';
 
-    // Validaciones básicas - CORREGIR: usar 'contraseña' aquí también
+    // Validaciones básicas
     if (empty($usuario->dni) || empty($usuario->nombre) || empty($usuario->apellido) || empty($usuario->email) || empty($contrasena)) {
         echo json_encode(["success" => false, "message" => "Todos los campos obligatorios deben ser completados."]);
         exit;
@@ -56,30 +54,20 @@ try {
         exit;
     }
 
-    // Registrar usuario
+    // Registrar usuario (solo en tabla usuario, no en paciente)
     if (!$usuario->registrar()) {
-        throw new Exception("Error al registrar usuario.");
-    }
-
-    // Registrar en tabla paciente (siempre será paciente)
-    $paciente = new Paciente($db);
-    $paciente->id = $usuario->id;
-    $paciente->obra_social = $_POST['obra_social'] ?? '';
-    $paciente->num_afiliado = $_POST['num_afiliado'] ?? '';
-
-    if (!$paciente->registrar()) {
-        throw new Exception("Error al registrar paciente.");
+        throw new Exception("Error al registrar secretaria.");
     }
 
     echo json_encode([
         "success" => true,
-        "message" => "Registro exitoso. Ahora puede iniciar sesión."
+        "message" => "Secretaria registrada exitosamente."
     ]);
 
 } catch (Exception $e) {
     echo json_encode([
         "success" => false,
-        "message" => "Ocurrió un error en el registro.",
+        "message" => "Ocurrió un error en el registro de la secretaria.",
         "error" => $e->getMessage()
     ]);
 }

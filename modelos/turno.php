@@ -53,16 +53,34 @@ class Turno {
         return $result;
     }
 
-    // Permite a un paciente reservar un turno disponible
     public function reservar($id_turno, $id_paciente) {
-        $sql = "UPDATE $this->table SET id_paciente = ?, estado = 'reservado' WHERE id = ? AND estado = 'disponible'";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ii", $id_paciente, $id_turno);
-        if ($stmt->execute() && $stmt->affected_rows > 0) {
-            return ['exito' => true, 'mensaje' => 'Turno reservado exitosamente'];
-        }
-        return ['error' => 'Turno no disponible o error al reservar'];
+    // Primero verificar que el turno existe y está disponible
+    $sql_check = "SELECT id, estado FROM $this->table WHERE id = ?";
+    $stmt_check = $this->conn->prepare($sql_check);
+    $stmt_check->bind_param("i", $id_turno);
+    $stmt_check->execute();
+    $result_check = $stmt_check->get_result();
+    
+    if ($result_check->num_rows === 0) {
+        return ['error' => 'Turno no encontrado'];
     }
+    
+    $turno = $result_check->fetch_assoc();
+    if ($turno['estado'] !== 'disponible') {
+        return ['error' => 'Turno no disponible'];
+    }
+    
+    // Ahora reservar
+    $sql = "UPDATE $this->table SET id_paciente = ?, estado = 'reservado' WHERE id = ? AND estado = 'disponible'";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bind_param("ii", $id_paciente, $id_turno);
+    
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        return ['exito' => true, 'mensaje' => 'Turno reservado exitosamente'];
+    }
+    
+    return ['error' => 'Error al reservar el turno'];
+}
 
     // Devuelve la lista de turnos reservados o cancelados de un paciente
     public function misTurnos($id_paciente) {
@@ -83,14 +101,41 @@ class Turno {
 
     // Permite cancelar un turno reservado
     public function cancelar($id_turno) {
-        $sql = "UPDATE $this->table SET estado = 'cancelado', id_paciente = NULL WHERE id = ? AND estado = 'reservado'";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $id_turno);
-        if ($stmt->execute() && $stmt->affected_rows > 0) {
-            return ['exito' => true, 'mensaje' => 'Turno cancelado exitosamente'];
-        }
-        return ['error' => 'Error al cancelar (solo turnos reservados)'];
+    // Primero verificar que el turno existe y está reservado
+    $sql_check = "SELECT id, estado, fecha, hora_inicio FROM $this->table WHERE id = ?";
+    $stmt_check = $this->conn->prepare($sql_check);
+    $stmt_check->bind_param("i", $id_turno);
+    $stmt_check->execute();
+    $result_check = $stmt_check->get_result();
+    
+    if ($result_check->num_rows === 0) {
+        return ['error' => 'Turno no encontrado'];
     }
+    
+    $turno = $result_check->fetch_assoc();
+    
+    // Verificar que el turno esté reservado
+    if ($turno['estado'] !== 'reservado') {
+        return ['error' => 'Solo se pueden cancelar turnos reservados'];
+    }
+    
+    // Verificar que el turno sea futuro
+    $fechaTurno = $turno['fecha'] . ' ' . $turno['hora_inicio'];
+    if (strtotime($fechaTurno) < time()) {
+        return ['error' => 'No se pueden cancelar turnos pasados'];
+    }
+    
+    // Cancelar el turno
+    $sql = "UPDATE $this->table SET estado = 'cancelado', id_paciente = NULL WHERE id = ?";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bind_param("i", $id_turno);
+    
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        return ['exito' => true, 'mensaje' => 'Turno cancelado exitosamente'];
+    }
+    
+    return ['error' => 'Error al cancelar el turno'];
+}
 
     // Actualiza los estados de los turnos pasados para que no aparezcan como disponibles
     private function actualizarEstadosPasados() {
@@ -99,34 +144,53 @@ class Turno {
     }
 
     // Verifica si el médico trabaja el día de la fecha indicada
-    public function esDiaLaborable($id_medico, $fecha) {
-        $dia_semana = date('N', strtotime($fecha));  // 1=Lun a 7=Dom
-        $sql = "SELECT 1 FROM medico_dia WHERE id_medico = ? AND id_dia = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ii", $id_medico, $dia_semana);
-        $stmt->execute();
-        return $stmt->get_result()->num_rows > 0;
+public function esDiaLaborable($id_medico, $fecha) {
+    $dia_semana = date('N', strtotime($fecha));  // 1=Lun a 7=Dom
+    $sql = "SELECT 1 FROM medico_dia WHERE id_medico = ? AND id_dia = ?";
+    $stmt = $this->conn->prepare($sql);
+    if (!$stmt) {
+        error_log("Error preparando esDiaLaborable: " . $this->conn->error);
+        return false;
     }
+    $stmt->bind_param("ii", $id_medico, $dia_semana);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->num_rows > 0;
+}
 
     // Crea un nuevo turno disponible para un médico en una fecha y hora
-    public function crear($id_medico, $fecha, $hora_inicio) {
-        // Verifica que el médico trabaje ese día
-        if (!$this->esDiaLaborable($id_medico, $fecha)) {
-            return ['error' => 'El médico no trabaja ese día'];
-        }
-
-        $estado = "disponible";
-        $sql = "INSERT INTO $this->table (id_medico, fecha, hora_inicio, estado) VALUES (?, ?, ?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return ['error' => 'Error preparando INSERT: ' . $this->conn->error];
-        }
-        $stmt->bind_param("isss", $id_medico, $fecha, $hora_inicio, $estado);
-        if ($stmt->execute()) {
-            return ['exito' => true, 'mensaje' => 'Turno creado exitosamente'];
-        }
-        return ['error' => 'Error al crear turno: ' . $stmt->error];
+public function crear($id_medico, $fecha, $hora_inicio) {
+    // Verificar que el médico trabaje ese día
+    if (!$this->esDiaLaborable($id_medico, $fecha)) {
+        return ['error' => 'El médico no trabaja ese día'];
     }
+
+    // VERIFICAR QUE NO EXISTA UN TURNO DUPLICADO
+    $sql_check = "SELECT id FROM $this->table WHERE id_medico = ? AND fecha = ? AND hora_inicio = ?";
+    $stmt_check = $this->conn->prepare($sql_check);
+    if (!$stmt_check) {
+        return ['error' => 'Error preparando consulta de verificación: ' . $this->conn->error];
+    }
+    $stmt_check->bind_param("iss", $id_medico, $fecha, $hora_inicio);
+    $stmt_check->execute();
+    $result_check = $stmt_check->get_result();
+    
+    if ($result_check->num_rows > 0) {
+        return ['error' => 'Ya existe un turno para esta fecha y hora'];
+    }
+
+    $estado = "disponible";
+    $sql = "INSERT INTO $this->table (id_medico, fecha, hora_inicio, estado) VALUES (?, ?, ?, ?)";
+    $stmt = $this->conn->prepare($sql);
+    if (!$stmt) {
+        return ['error' => 'Error preparando INSERT: ' . $this->conn->error];
+    }
+    $stmt->bind_param("isss", $id_medico, $fecha, $hora_inicio, $estado);
+    if ($stmt->execute()) {
+        return ['exito' => true, 'mensaje' => 'Turno creado exitosamente'];
+    }
+    return ['error' => 'Error al crear turno: ' . $stmt->error];
+}
 
     // Permite editar un turno disponible (cambiar fecha y hora)
     public function editar($id_turno, $fecha, $hora_inicio) {

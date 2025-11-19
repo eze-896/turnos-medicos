@@ -1,10 +1,15 @@
 <?php
-// Indica que la respuesta será en formato JSON y con codificación UTF-8
+// MEJOR MANEJO DE ERRORES - Evita que se muestre HTML
 header("Content-Type: application/json; charset=utf-8");
-// Inicia una sesión para manejar datos del usuario logueado
+ob_start(); // Capturar cualquier output no deseado
+
+// Configuración de errores
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
 session_start();
 
-// Incluye los archivos necesarios para conectarse a la base de datos y manejar turnos, médicos y especialidades
+// Incluye los archivos necesarios
 include_once "../modelos/conexion.php";
 include_once "../modelos/turno.php";
 include_once "../modelos/medico.php";
@@ -117,21 +122,45 @@ case "listar_mes":
     }
     break;
     
-    // Reservar un turno para el paciente logueado
-    case "reservar":
-        $id_turno = (int) ($data["id_turno"] ?? 0);
-        // Toma el id_paciente desde la sesión (debe estar logueado)
-        $id_paciente = (int) ($_SESSION["id_usuario"] ?? 0);
-
-        // Verifica que existan los datos necesarios
-        if (!$id_turno || !$id_paciente) {
-            echo json_encode(["error" => "Faltan datos para reservar. Debe iniciar sesión."]);
-            break;
-        }
-        // Intenta reservar el turno
-        echo json_encode($turnoModel->reservar($id_turno, $id_paciente));
+    // En la acción "reservar" del switch case:
+case "reservar":
+    $id_turno = (int) ($data["id_turno"] ?? 0);
+    
+    // VERIFICAR SESIÓN PRIMERO
+    if (!isset($_SESSION["id_usuario"])) {
+        echo json_encode(["error" => "Debe iniciar sesión para reservar turnos"]);
         break;
-
+    }
+    
+    // Obtener el ID del paciente desde la sesión del usuario
+    $id_usuario = (int) $_SESSION["id_usuario"];
+    
+    // Necesitamos convertir id_usuario a id_paciente
+    // Buscar si el usuario es un paciente
+    $sql_paciente = "SELECT id FROM paciente WHERE id = ?";
+    $stmt_paciente = $db->prepare($sql_paciente);
+    $stmt_paciente->bind_param("i", $id_usuario);
+    $stmt_paciente->execute();
+    $result_paciente = $stmt_paciente->get_result();
+    
+    if ($result_paciente->num_rows === 0) {
+        echo json_encode(["error" => "El usuario no es un paciente registrado"]);
+        break;
+    }
+    
+    $row_paciente = $result_paciente->fetch_assoc();
+    $id_paciente = (int) $row_paciente['id'];
+    
+    // Verifica que existan los datos necesarios
+    if (!$id_turno || !$id_paciente) {
+        echo json_encode(["error" => "Faltan datos para reservar"]);
+        break;
+    }
+    
+    // Intenta reservar el turno
+    echo json_encode($turnoModel->reservar($id_turno, $id_paciente));
+    break;
+    
     // Cancelar un turno (por id_turno)
     case "cancelar":
         $id_turno = (int) ($data["id_turno"] ?? 0);
@@ -154,10 +183,17 @@ case "listar_mes":
         echo json_encode($turnoModel->misTurnos($id_paciente));
         break;
 
-    // Listar todos los médicos
     case "medicos":
+    $id_especialidad = !empty($data["id_especialidad"]) ? (int) $data["id_especialidad"] : null;
+    
+    if ($id_especialidad) {
+        // Filtrar médicos por especialidad
+        echo json_encode($medicoModel->obtenerPorEspecialidad($id_especialidad));
+    } else {
+        // Todos los médicos
         echo json_encode($medicoModel->obtenerTodosConUsuario());
-        break;
+    }
+    break;
 
     // Listar todas las especialidades
     case "especialidades":

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Hospital Nika</title>
+    <link rel="stylesheet" href="estilos/dashboard.css">
+    <link rel="stylesheet" href="estilos/turnos.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Menú lateral -->
+        <nav class="sidebar" id="sidebar">
+            <div class="user-profile">
+                <div class="user-avatar" id="user-avatar">U</div>
+                <div class="user-info">
+                    <h3 id="user-name">Cargando...</h3>
+                    <span class="user-role" id="user-role">Paciente</span>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="#" class="menu-item active" data-section="calendario">📅 Sacar Turno</a></li>
+                <li><a href="#" class="menu-item" data-section="mis-turnos">📋 Mis Turnos Reservados</a></li>
+                <li><a href="#" class="menu-item" data-section="perfil">👤 Mi Perfil</a></li>
+                <li><a href="../controles/logout.php" class="menu-item logout">🚪 Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="main-content">
+            <header class="content-header">
+                <button class="menu-toggle" id="menu-toggle">☰</button>
+                <h1>Hospital Nika</h1>
+                <div class="header-subtitle" id="header-subtitle">Sistema de Gestión de Turnos Médicos</div>
+            </header>
+
+            <!-- Sección Calendario -->
+            <section id="calendario" class="content-section active">
+                <div class="section-header">
+                    <h2>Sacar Nuevo Turno</h2>
+                    <p class="section-subtitle">Seleccione especialidad, médico y fecha para reservar su turno médico</p>
+                </div>
+                
+                <!-- Aquí va todo el contenido del calendario de turnos.js -->
+                <div class="calendar-container">
+                    <div class="header">
+                        <div>
+                            <button class="month-nav" id="prev-month" aria-label="Mes anterior">&lt;</button>
+                        </div>
+                        <h1 class="month-title" id="current-month">Mes y Año</h1>
+                        <div>
+                            <button class="month-nav" id="next-month" aria-label="Mes siguiente">&gt;</button>
+                        </div>
+                    </div>
+
+                    <div class="filtros">
+                        <label>Filtrar por médico:
+                            <select id="medico">
+                                <option value="">Seleccione médico</option>
+                            </select>
+                        </label>
+
+                        <label>Especialidad:
+                            <select id="especialidad">
+                                <option value="">Seleccione especialidad</option>
+                            </select>
+                        </label>
+
+                        <label>Ver mes:
+                            <input type="month" id="month-picker" />
+                        </label>
+
+                        <button id="buscar" class="btn">Aplicar Filtros</button>
+                        <button id="reset-filtros" class="btn" style="background: #e74c3c;">Resetear Filtros</button>
+                    </div>
+
+                    <div class="weekdays">
+                        <div class="weekday">Dom</div>
+                        <div class="weekday">Lun</div>
+                        <div class="weekday">Mar</div>
+                        <div class="weekday">Mié</div>
+                        <div class="weekday">Jue</div>
+                        <div class="weekday">Vie</div>
+                        <div class="weekday">Sáb</div>
+                    </div>
+
+                    <div id="calendar-grid" class="calendar" role="grid" aria-label="Calendario de turnos">
+                        <!-- generado por JS -->
+                    </div>
+
+                    <div id="turnos-box" class="turnos-flotante" aria-hidden="true">
+                        <div class="turnos-header">
+                            <div class="turnos-title" id="turnos-date">Fecha</div>
+                            <button class="close-turnos" id="close-turnos" aria-label="Cerrar">&times;</button>
+                        </div>
+                        <div class="turnos-list" id="turnos-list"></div>
+                        <div style="display:flex;gap:8px;">
+                            <button id="reservar-btn" class="submit-turnos" disabled>Reservar</button>
+                            <button id="cancel-btn" class="submit-turnos" style="background:#ccc;color:#333;">Cancelar</button>
+                        </div>
+                    </div>
+
+                    <div style="text-align:center;margin-top:16px;">
+                        <button id="msg-clear" class="btn" style="display:none;">Cerrar mensaje</button>
+                        <div id="message" style="margin-top:8px;min-height:24px;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Mis Turnos -->
+            <section id="mis-turnos" class="content-section">
+                <div class="section-header">
+                    <h2>Mis Turnos Reservados</h2>
+                    <p class="section-subtitle">Gestiona tus turnos médicos programados</p>
+                </div>
+                <div id="turnos-reservados-container">
+                    <div class="loading">Cargando tus turnos...</div>
+                </div>
+            </section>
+
+            <!-- Sección Perfil -->
+            <section id="perfil" class="content-section">
+                <div class="section-header">
+                    <h2>Mi Perfil</h2>
+                    <p class="section-subtitle">Información personal de tu cuenta</p>
+                </div>
+                <div id="perfil-container">
+                    <div class="loading">Cargando información del perfil...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="control_vistas/dashboard.js"></script>
+    <script src="control_vistas/turnos.js"></script>
+    <script>
+// Script de diagnóstico
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 DIAGNÓSTICO DEL CALENDARIO:');
+    
+    // Verificar sección activa
+    const seccionActiva = document.querySelector('.content-section.active');
+    console.log('Sección activa:', seccionActiva ? seccionActiva.id : 'NINGUNA');
+    
+    // Verificar elementos del calendario
+    const elementosCalendario = [
+        'calendar-grid', 'current-month', 'prev-month', 'next-month'
+    ];
+    
+    elementosCalendario.forEach(id => {
+        const elemento = document.getElementById(id);
+        console.log(`${id}:`, elemento ? 'ENCONTRADO' : 'NO ENCONTRADO');
+        if (elemento) {
+            console.log('  - Contenido:', elemento.innerHTML.substring(0, 50));
+        }
+    });
+    
+    // Forzar visibilidad temporal
+    const calendarioSection = document.getElementById('calendario');
+    if (calendarioSection) {
+        calendarioSection.style.display = 'block';
+        calendarioSection.style.visibility = 'visible';
+        calendarioSection.style.opacity = '1';
+    }
+});
+</script>
+</body>
+</html>

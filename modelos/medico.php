@@ -92,5 +92,19 @@ class Medico {
         $stmt->bind_param("i", $id);
         return $stmt->execute();
     }
+
+    public function obtenerPorEspecialidad($id_especialidad) {
+    $sql = "SELECT DISTINCT m.id as id_medico, u.nombre, u.apellido, u.email, u.telefono
+            FROM medico m
+            JOIN usuario u ON m.id_usuario = u.id
+            JOIN medico_especialidad me ON m.id = me.id_medico
+            WHERE me.id_especialidad = ?
+            ORDER BY u.apellido, u.nombre";
+    
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bind_param("i", $id_especialidad);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
 }
 ?>
